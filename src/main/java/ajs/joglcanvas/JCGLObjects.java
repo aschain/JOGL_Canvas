@@ -1,19 +1,78 @@
 package ajs.joglcanvas;
 
+import static com.jogamp.opengl.GL.GL_ARRAY_BUFFER;
+import static com.jogamp.opengl.GL.GL_BLEND;
 import static com.jogamp.opengl.GL.GL_COLOR_ATTACHMENT0;
 import static com.jogamp.opengl.GL.GL_COLOR_BUFFER_BIT;
 import static com.jogamp.opengl.GL.GL_DEPTH_ATTACHMENT;
 import static com.jogamp.opengl.GL.GL_DEPTH_BUFFER_BIT;
+import static com.jogamp.opengl.GL.GL_DST_COLOR;
+import static com.jogamp.opengl.GL.GL_DYNAMIC_DRAW;
+import static com.jogamp.opengl.GL.GL_ELEMENT_ARRAY_BUFFER;
+import static com.jogamp.opengl.GL.GL_FLOAT;
 import static com.jogamp.opengl.GL.GL_FRAMEBUFFER;
 import static com.jogamp.opengl.GL.GL_FRAMEBUFFER_COMPLETE;
+import static com.jogamp.opengl.GL.GL_FUNC_ADD;
+import static com.jogamp.opengl.GL.GL_LINEAR;
+import static com.jogamp.opengl.GL.GL_MAP_INVALIDATE_BUFFER_BIT;
+import static com.jogamp.opengl.GL.GL_MAP_INVALIDATE_RANGE_BIT;
+import static com.jogamp.opengl.GL.GL_MAP_WRITE_BIT;
+import static com.jogamp.opengl.GL.GL_MAX_TEXTURE_SIZE;
 import static com.jogamp.opengl.GL.GL_NEAREST;
+import static com.jogamp.opengl.GL.GL_ONE_MINUS_SRC_ALPHA;
+import static com.jogamp.opengl.GL.GL_PACK_ALIGNMENT;
+import static com.jogamp.opengl.GL.GL_R32F;
+import static com.jogamp.opengl.GL.GL_R8;
 import static com.jogamp.opengl.GL.GL_RENDERBUFFER;
+import static com.jogamp.opengl.GL.GL_RG32F;
+import static com.jogamp.opengl.GL.GL_RG8;
+import static com.jogamp.opengl.GL.GL_RGB;
+import static com.jogamp.opengl.GL.GL_RGB32F;
+import static com.jogamp.opengl.GL.GL_RGB8;
 import static com.jogamp.opengl.GL.GL_RGBA;
+import static com.jogamp.opengl.GL.GL_RGBA32F;
+import static com.jogamp.opengl.GL.GL_RGBA8;
+import static com.jogamp.opengl.GL.GL_SRC_ALPHA;
+import static com.jogamp.opengl.GL.GL_SRC_COLOR;
+import static com.jogamp.opengl.GL.GL_STATIC_DRAW;
+import static com.jogamp.opengl.GL.GL_TEXTURE0;
+import static com.jogamp.opengl.GL.GL_TEXTURE_2D;
 import static com.jogamp.opengl.GL.GL_TEXTURE_MAG_FILTER;
 import static com.jogamp.opengl.GL.GL_TEXTURE_MIN_FILTER;
+import static com.jogamp.opengl.GL.GL_TEXTURE_WRAP_S;
+import static com.jogamp.opengl.GL.GL_TEXTURE_WRAP_T;
+import static com.jogamp.opengl.GL.GL_TRIANGLES;
+import static com.jogamp.opengl.GL.GL_UNPACK_ALIGNMENT;
+import static com.jogamp.opengl.GL.GL_UNSIGNED_BYTE;
+import static com.jogamp.opengl.GL.GL_UNSIGNED_INT;
+import static com.jogamp.opengl.GL.GL_UNSIGNED_SHORT;
+import static com.jogamp.opengl.GL.GL_VERSION;
+import static com.jogamp.opengl.GL.GL_VIEWPORT;
 import static com.jogamp.opengl.GL2.*;
+import static com.jogamp.opengl.GL2ES2.GL_CLAMP_TO_BORDER;
+import static com.jogamp.opengl.GL2ES2.GL_CURRENT_PROGRAM;
 import static com.jogamp.opengl.GL2ES2.GL_DEPTH_COMPONENT;
+import static com.jogamp.opengl.GL2ES2.GL_FRAGMENT_SHADER;
+import static com.jogamp.opengl.GL2ES2.GL_MAX_3D_TEXTURE_SIZE;
+import static com.jogamp.opengl.GL2ES2.GL_RED;
+import static com.jogamp.opengl.GL2ES2.GL_RG;
 import static com.jogamp.opengl.GL2ES2.GL_TEXTURE_3D;
+import static com.jogamp.opengl.GL2ES2.GL_TEXTURE_BORDER_COLOR;
+import static com.jogamp.opengl.GL2ES2.GL_TEXTURE_WRAP_R;
+import static com.jogamp.opengl.GL2ES2.GL_VERTEX_SHADER;
+import static com.jogamp.opengl.GL2ES3.GL_COLOR;
+import static com.jogamp.opengl.GL2ES3.GL_DEPTH;
+import static com.jogamp.opengl.GL2ES3.GL_MAX;
+import static com.jogamp.opengl.GL2ES3.GL_PIXEL_UNPACK_BUFFER;
+import static com.jogamp.opengl.GL2ES3.GL_TEXTURE_BASE_LEVEL;
+import static com.jogamp.opengl.GL2ES3.GL_TEXTURE_MAX_LEVEL;
+import static com.jogamp.opengl.GL2ES3.GL_UNIFORM_BUFFER;
+import static com.jogamp.opengl.GL2GL3.GL_DOUBLE;
+import static com.jogamp.opengl.GL2GL3.GL_R16;
+import static com.jogamp.opengl.GL2GL3.GL_RG16;
+import static com.jogamp.opengl.GL2GL3.GL_RGB16;
+import static com.jogamp.opengl.GL2GL3.GL_RGBA16;
+import static com.jogamp.opengl.GL2GL3.GL_UNSIGNED_INT_8_8_8_8;
 
 import java.awt.image.BufferedImage;
 import java.io.File;
@@ -35,7 +94,7 @@ import com.jogamp.opengl.GL2GL3;
 import com.jogamp.opengl.GL3;
 import com.jogamp.opengl.GL4;
 import com.jogamp.opengl.GLAutoDrawable;
-import com.jogamp.opengl.math.FloatUtil;
+import com.jogamp.math.FloatUtil;
 import com.jogamp.opengl.util.GLBuffers;
 import com.jogamp.opengl.util.awt.AWTGLReadBufferUtil;
 import com.jogamp.opengl.util.glsl.ShaderCode;
@@ -53,6 +112,7 @@ public class JCGLObjects {
 	private GL2 gl2=null;
 	private GL3 gl3=null;
 	private GL4 gl4=null;
+	public final int LUT_SIZE=12;
 	private AWTGLReadBufferUtil ss=null;
 	public Hashtable<String,JCTexture> textures=new Hashtable<String,JCTexture>();
 	public Hashtable<String,JCPbo> pbos=new Hashtable<String,JCPbo>();
@@ -885,7 +945,7 @@ public class JCGLObjects {
 					}
 					if(bindName.contentEquals("luts")) {
 						int loc=(program==null?gl2.glGetUniformLocation(pr[0], "luts"):program.getLocation("luts"));
-						gl2.glUniform4fv(loc, 12, buffer.asFloatBuffer());
+						gl2.glUniform4fv(loc, LUT_SIZE, buffer.asFloatBuffer());
 					}
 				}
 				return;
@@ -1040,7 +1100,7 @@ public class JCGLObjects {
 	        	String radd="/GL2";
 	        	if(glver==3) {add="3"; radd="/GL3";}
 	        	if(glver==4) {add="4"; radd="/GL4";}
-	        	
+
 	            ShaderCode vertShader = ShaderCode.create(gl23, GL_VERTEX_SHADER, this.getClass(), root+radd, null, vertex+add,
 	                    "vert", null, true);
 	            ShaderCode fragShader = ShaderCode.create(gl23, GL_FRAGMENT_SHADER, this.getClass(), root+radd, null, fragment+add,
@@ -1093,6 +1153,8 @@ public class JCGLObjects {
 	            }
 	            
 	            handle=shaderProgram.program();
+				if(glver>3)
+	        		gl4.glProgramParameteri(handle, GL_PROGRAM_BINARY_RETRIEVABLE_HINT, GL_FALSE);
 	            
 	            if(glver>2) {
 	        		gl23.glUniformBlockBinding(handle, gl23.glGetUniformBlockIndex(handle, "Transform0"), 1);
