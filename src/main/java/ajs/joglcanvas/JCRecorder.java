@@ -15,7 +15,8 @@ import java.awt.event.WindowEvent;
 import java.awt.image.BufferedImage;
 import java.util.concurrent.atomic.AtomicBoolean;
 
-import com.jogamp.opengl.math.FloatUtil;
+import com.jogamp.math.FloatUtil;
+import com.jogamp.math.Matrix4f;
 
 import ij.IJ;
 import ij.ImagePlus;
@@ -147,6 +148,7 @@ public class JCRecorder implements PlugIn, BIScreenGrabber {
 			}
 			dofrmst=yn.yesPressed();
 		}
+		@SuppressWarnings("unused")
 		final boolean dofrms=dofrmst;
 		stop=false;
 		(new Thread() {
@@ -164,12 +166,12 @@ public class JCRecorder implements PlugIn, BIScreenGrabber {
 				do{tn++;title=imp.getTitle()+"-genstack"+IJ.pad(tn, 2);}while(WindowManager.getImage(title)!=null);
 				dcic.setOne3Dslice(true);
 				float slice=2f*dcic.zmax/imp.getNSlices();
-				float[] preveas=dcic.getEulerAngles();
+				//float[] preveas=dcic.getEulerAngles();
 
 				int endfr=imp.getT(),stfr=endfr-1;
 				if(dofrms) {stfr=0;endfr=imp.getNFrames();}
 				float[] eas=dcic.getEulerAngles();
-				float[] rotation=FloatUtil.makeRotationEuler(new float[16], 0, eas[1]*FloatUtil.PI/180f, eas[0]*FloatUtil.PI/180f, eas[2]*FloatUtil.PI/180f);
+				float[] rotation=(new Matrix4f()).setToRotationEuler(eas[1]*FloatUtil.PI/180f, eas[0]*FloatUtil.PI/180f, eas[2]*FloatUtil.PI/180f).get(new float[16]);
 				float[] vecs=new float[] {
 						-1f,-1f,dcic.zmax, 0f,
 						1f,-1f,dcic.zmax, 0f,

@@ -35,7 +35,7 @@ import com.jogamp.opengl.GL2GL3;
 import com.jogamp.opengl.GL3;
 import com.jogamp.opengl.GL4;
 import com.jogamp.opengl.GLAutoDrawable;
-import com.jogamp.opengl.math.FloatUtil;
+import com.jogamp.math.FloatUtil;
 import com.jogamp.opengl.util.GLBuffers;
 import com.jogamp.opengl.util.awt.AWTGLReadBufferUtil;
 import com.jogamp.opengl.util.glsl.ShaderCode;
@@ -53,6 +53,7 @@ public class JCGLObjects {
 	private GL2 gl2=null;
 	private GL3 gl3=null;
 	private GL4 gl4=null;
+	public final int LUT_SIZE=12;
 	private AWTGLReadBufferUtil ss=null;
 	public Hashtable<String,JCTexture> textures=new Hashtable<String,JCTexture>();
 	public Hashtable<String,JCPbo> pbos=new Hashtable<String,JCPbo>();
@@ -885,7 +886,7 @@ public class JCGLObjects {
 					}
 					if(bindName.contentEquals("luts")) {
 						int loc=(program==null?gl2.glGetUniformLocation(pr[0], "luts"):program.getLocation("luts"));
-						gl2.glUniform4fv(loc, 12, buffer.asFloatBuffer());
+						gl2.glUniform4fv(loc, LUT_SIZE, buffer.asFloatBuffer());
 					}
 				}
 				return;

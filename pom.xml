@@ -8,13 +8,13 @@
 	<parent>
 		<groupId>org.scijava</groupId>
 		<artifactId>pom-scijava</artifactId>
-		<version>37.0.0</version>
+		<version>43.0.0</version>
 		<relativePath />
 	</parent>
 
 	<groupId>ajs.joglcanvas</groupId>
 	<artifactId>JOGL_Canvas</artifactId>
-	<version>0.2.3-SNAPSHOT</version>
+	<version>0.2.4-SNAPSHOT</version>
 
 	<name>JOGL_Canvas</name>
 	<description>ImageJ1 Plugin replacing the Java Canvas with an OpenGL JOGL GLCanvas.</description>
@@ -82,7 +82,7 @@
 		<main-class>ajs.joglcanvas.JCP</main-class>
 		<license.licenseName>bsd_2</license.licenseName>
 		<license.copyrightOwners>Aaron Schain</license.copyrightOwners>
-		<scijava.jvm.build.version>[1.8.0-1,300)</scijava.jvm.build.version>
+		<scijava.jvm.build.version>[1.8.0-1,300]</scijava.jvm.build.version>
 		<maven.exec.skip>false</maven.exec.skip>
 	</properties>
 	
@@ -98,12 +98,12 @@
 		<dependency>
 			<groupId>org.jogamp.gluegen</groupId>
 			<artifactId>gluegen-rt-main</artifactId>
-			<version>2.4.0</version>
+			<version>2.6.0</version>
 		</dependency>
 		<dependency>
 			<groupId>org.jogamp.jogl</groupId>
 			<artifactId>jogl-all-main</artifactId>
-			<version>2.4.0</version>
+			<version>2.6.0</version>
 		</dependency>
 		<dependency>
 			<groupId>net.imagej</groupId>

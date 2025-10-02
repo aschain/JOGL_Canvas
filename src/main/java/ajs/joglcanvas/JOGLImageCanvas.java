@@ -75,7 +75,8 @@ import com.jogamp.opengl.GLContext;
 import com.jogamp.opengl.util.texture.awt.AWTTextureIO;
 import com.jogamp.opengl.GLEventListener;
 import com.jogamp.opengl.GLProfile;
-import com.jogamp.opengl.math.FloatUtil;
+import com.jogamp.math.Matrix4f;
+import com.jogamp.math.FloatUtil;
 import com.jogamp.opengl.util.GLBuffers;
 
 
@@ -308,7 +309,7 @@ public class JOGLImageCanvas extends ImageCanvas implements GLEventListener, Ima
 		glos.newUniformBuffer("model", 16 * Buffers.SIZEOF_FLOAT, null);
 		glos.newUniformBuffer("modelr", 16 * Buffers.SIZEOF_FLOAT, null);
 		glos.getUniformBuffer("modelr").setBindName("model");
-		glos.newUniformBuffer("luts", 12*4 * Buffers.SIZEOF_FLOAT, null);
+		glos.newUniformBuffer("luts", glos.LUT_SIZE*4 * Buffers.SIZEOF_FLOAT, null);
 		glos.newUniformBuffer("idm", 16 * Buffers.SIZEOF_FLOAT, id);
 
 		glos.getUniformBuffer("model").loadIdentity();
@@ -370,10 +371,10 @@ public class JOGLImageCanvas extends ImageCanvas implements GLEventListener, Ima
 		glos.getUniformBuffer("CB-left").setBindName("global");
 		glos.getUniformBuffer("CB-right").setBindName("global");
 		
-		float[] orthocbl = FloatUtil.makeOrtho(new float[16], 0, false, -CB_MAXSIZE, CB_MAXSIZE, -CB_MAXSIZE, CB_MAXSIZE, -CB_MAXSIZE, CB_MAXSIZE);
-		float[] orthocbr = FloatUtil.makeOrtho(new float[16], 0, false, -CB_MAXSIZE, CB_MAXSIZE, -CB_MAXSIZE, CB_MAXSIZE, -CB_MAXSIZE, CB_MAXSIZE);
-		float[] translatecbl=FloatUtil.makeTranslation(new float[16], 0, false, -CB_MAXSIZE*CB_TRANSLATE, 0f, 0f);
-		float[] translatecbr=FloatUtil.makeTranslation(new float[16], 0, false, CB_MAXSIZE*CB_TRANSLATE, 0f, 0f);
+		float[] orthocbl = (new Matrix4f()).setToOrtho(-CB_MAXSIZE, CB_MAXSIZE, -CB_MAXSIZE, CB_MAXSIZE, -CB_MAXSIZE, CB_MAXSIZE).get(new float[16]);
+		float[] orthocbr = (new Matrix4f()).setToOrtho(-CB_MAXSIZE, CB_MAXSIZE, -CB_MAXSIZE, CB_MAXSIZE, -CB_MAXSIZE, CB_MAXSIZE).get(new float[16]);
+		float[] translatecbl=(new Matrix4f()).setToTranslation(-CB_MAXSIZE*CB_TRANSLATE, 0f, 0f).get(new float[16]);
+		float[] translatecbr=(new Matrix4f()).setToTranslation(CB_MAXSIZE*CB_TRANSLATE, 0f, 0f).get(new float[16]);
 		FloatUtil.multMatrix(orthocbl, translatecbl);
 		FloatUtil.multMatrix(orthocbr, translatecbr);
 		glos.getUniformBuffer("CB-left").loadIdentity(0);
@@ -386,10 +387,10 @@ public class JOGLImageCanvas extends ImageCanvas implements GLEventListener, Ima
 
 		glos.getUniformBuffer("HSBS-left").setBindName("global");
 		glos.getUniformBuffer("HSBS-right").setBindName("global");
-		orthocbl = FloatUtil.makeOrtho(new float[16], 0, false, -2f, 2f, -1f, 1f, -1f, 1f);
-		orthocbr = FloatUtil.makeOrtho(new float[16], 0, false, -2f, 2f, -1f, 1f, -1f, 1f);
-		translatecbl=FloatUtil.makeTranslation(new float[16], 0, false, -1f, 0f, 0f);
-		translatecbr=FloatUtil.makeTranslation(new float[16], 0, false, 1f, 0f, 0f);
+		orthocbl = (new Matrix4f()).setToOrtho(-2f, 2f, -1f, 1f, -1f, 1f).get(new float[16]);
+		orthocbr = (new Matrix4f()).setToOrtho(-2f, 2f, -1f, 1f, -1f, 1f).get(new float[16]);
+		translatecbl=(new Matrix4f()).setToTranslation(-1f, 0f, 0f).get(new float[16]);
+		translatecbr=(new Matrix4f()).setToTranslation(1f, 0f, 0f).get(new float[16]);
 		FloatUtil.multMatrix(orthocbl, translatecbl);
 		FloatUtil.multMatrix(orthocbr, translatecbr);
 		glos.getUniformBuffer("HSBS-left").loadIdentity(0);
@@ -520,7 +521,7 @@ public class JOGLImageCanvas extends ImageCanvas implements GLEventListener, Ima
 		if(ratio>1.0f) sx=(float)(1.0/ratio);  else sy=(float)ratio;
 		//float znear=zNear, zfar=zFar;
 		//if(one3Dslice) {znear=-2/(float)imageWidth; zfar=-znear;}
-		float[] viewmatrix=FloatUtil.makeOrtho(new float[16], 0, false, -1f/sx, 1f/sx, -1f/sy, 1f/sy, zNear/sx, zFar/sx);
+		float[] viewmatrix=(new Matrix4f()).setToOrtho(-1f/sx, 1f/sx, -1f/sy, 1f/sy, zNear/sx, zFar/sx).get(new float[16]);
 		
 		//clear "projection" matrix
 		glos.getUniformBuffer("global").loadIdentity();
@@ -714,23 +715,12 @@ public class JOGLImageCanvas extends ImageCanvas implements GLEventListener, Ima
 				max=1f;
 				color=i==0?8:0;//(i==0?1:i==1?2:i==2?4:0);
 			}else {
-				if(i<luts.length) {
+				if(i<luts.length && active[i]) {
 					int rgb=luts[i].getRGB(255);
 					boolean inv=false;
 					if((rgb & 0x00ffffff)==0) {
 						if((luts[i].getRGB(0)&0x00ffffff)>0)rgb=luts[i].getRGB(0);
 						inv=true;
-					}
-					if(active[i] && (cmode==IJ.COMPOSITE || imp.getC()==(i+1))) {
-						if(cmode==IJ.GRAYSCALE)color=7;
-						else color=(((rgb & 0x00ff0000)==0x00ff0000)?1:0) + (((rgb & 0x0000ff00)==0x0000ff00)?2:0) + (((rgb & 0x000000ff)==0x000000ff)?4:0);
-						if(imp.isThreshold()&& (chs==1 || cmode==IJ.GRAYSCALE || cmode==IJ.COLOR) && imp.getProcessor().getLutUpdateMode()!=ImageProcessor.NO_LUT_UPDATE){
-							color=9f;
-							ImageProcessor ip=imp.getProcessor();
-							tmin=(float)(ip.getMinThreshold()/topmax);
-							tmax=(float)(ip.getMaxThreshold()/topmax);
-							lutType=(float)(10+imp.getProcessor().getLutUpdateMode());
-						}
 					}
 					if(bitDepth<32) {
 						min=(float)(Math.round(luts[i].min)/topmax);
@@ -741,6 +731,19 @@ public class JOGLImageCanvas extends ImageCanvas implements GLEventListener, Ima
 					}
 					if(min==max) {if(min==0){max+=(1/topmax);}else{min-=(1/topmax);}}
 					if(inv) {float temp=max; max=min; min=temp;}
+					if(cmode==IJ.COMPOSITE || imp.getC()==(i+1)) {
+						if(cmode==IJ.GRAYSCALE)color=7;
+						else color=(((rgb & 0x00ff0000)==0x00ff0000)?1:0) + (((rgb & 0x0000ff00)==0x0000ff00)?2:0) + (((rgb & 0x000000ff)==0x000000ff)?4:0);
+						//if(imp.isThreshold()&& (chs==1 || cmode==IJ.GRAYSCALE || cmode==IJ.COLOR) && imp.getProcessor().getLutUpdateMode()!=ImageProcessor.NO_LUT_UPDATE){
+						if((i==(imp.getC()-1)) && imp.isThreshold() && imp.getProcessor().getLutUpdateMode()!=ImageProcessor.NO_LUT_UPDATE){
+							color+=9f;
+							ImageProcessor ip=imp.getProcessor();
+							tmin=(float)(ip.getMinThreshold()/topmax);
+							tmax=(float)(ip.getMaxThreshold()/topmax);
+							lutType=(float)(10+imp.getProcessor().getLutUpdateMode());
+							if(chs>1 && cmode==IJ.COMPOSITE) lutType=20f;
+						}
+					}
 				}
 			}
 			lutMatrixPointer.putFloat(i*4*Float.BYTES,min);
@@ -776,7 +779,7 @@ public class JOGLImageCanvas extends ImageCanvas implements GLEventListener, Ima
 			//and order of drawing slices depending on rotation
 			if(go3d) {
 				//Set up matricies
-				rotate=FloatUtil.makeRotationEuler(new float[16], 0, dy*FloatUtil.PI/180f, dx*FloatUtil.PI/180f, dz*FloatUtil.PI/180f);
+				rotate=(new Matrix4f()).setToRotationEuler(dy*FloatUtil.PI/180f, dx*FloatUtil.PI/180f, dz*FloatUtil.PI/180f).get(new float[16]);
 				//log("\\Update0:X x"+Math.round(100.0*matrix[0])/100.0+" y"+Math.round(100.0*matrix[1])/100.0+" z"+Math.round(100.0*matrix[2])/100.0);
 				//log("\\Update1:Y x"+Math.round(100.0*matrix[4])/100.0+" y"+Math.round(100.0*matrix[5])/100.0+" z"+Math.round(100.0*matrix[6])/100.0);
 				//log("\\Update2:Z x"+Math.round(100.0*matrix[8])/100.0+" y"+Math.round(100.0*matrix[9])/100.0+" z"+Math.round(100.0*matrix[10])/100.0);
