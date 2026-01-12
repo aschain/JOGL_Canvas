@@ -2214,8 +2214,8 @@ public class JOGLImageCanvas extends ImageCanvas implements GLEventListener, Ima
 	private static boolean isRightClick(MouseEvent e) {
 	    return (e.getButton()==MouseEvent.BUTTON3 ||
 	            (IJ.isMacintosh() &&
-	                    (e.getModifiers() & MouseEvent.BUTTON1_MASK) != 0 &&
-	                    (e.getModifiers() & MouseEvent.CTRL_MASK) != 0));
+	                    (e.getModifiersEx() & MouseEvent.BUTTON1_DOWN_MASK) != 0 &&
+	                    (e.getModifiersEx() & MouseEvent.CTRL_DOWN_MASK) != 0));
 	}
 	
 	private boolean shouldKeep(MouseEvent e) {
