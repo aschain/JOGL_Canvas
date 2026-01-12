@@ -54,7 +54,7 @@ public class JCStackWindow extends StackWindow {
 	
 	@Override
 	public boolean close() {
-		if(jic.isMirror && imp.getWindow()==this) ((JOGLImageCanvas) imp.getCanvas()).dispose();
+		if(imp.getWindow()==this) ((JOGLImageCanvas) imp.getCanvas()).dispose();
 		return super.close();
 	}
 	

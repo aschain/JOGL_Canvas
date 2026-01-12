@@ -578,13 +578,6 @@ public class JOGLImageCanvas extends ImageCanvas implements GLEventListener, Ima
 		log("Disposing GL Canvas");
 		System.out.println("Disposing ajs-----------------------");
 		glw.setPointerVisible(true);
-		java.awt.EventQueue.invokeLater(new Runnable() {
-			public void run() {
-					if(jccpDialog!=null)jccpDialog.dispose();
-					if(jcgDialog!=null)jcgDialog.dispose();
-					if(jcrDialog!=null)jcrDialog.dispose();
-			}
-		});
 		glos.setGL(drawable);
 		glos.dispose();
 		imp.unlock();
@@ -1505,6 +1498,12 @@ public class JOGLImageCanvas extends ImageCanvas implements GLEventListener, Ima
 	}
 	
 	public void dispose() {
+		if(jccpDialog!=null)jccpDialog.dispose();
+		if(jcgDialog!=null)jcgDialog.dispose();
+		if(jcrDialog!=null)jcrDialog.dispose();
+		jccpDialog=null;
+		jcgDialog=null;
+		jcrDialog=null;
 		glw.destroy();
 		if(mirror!=null)mirror.dispose();
 		mirror=null;
