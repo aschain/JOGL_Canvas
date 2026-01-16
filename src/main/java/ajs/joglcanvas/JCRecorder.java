@@ -25,6 +25,7 @@ import ij.Macro;
 import ij.WindowManager;
 import ij.gui.YesNoCancelDialog;
 import ij.plugin.PlugIn;
+import ij.process.ColorProcessor;
 
 public class JCRecorder implements PlugIn, BIScreenGrabber {
 
@@ -35,7 +36,7 @@ public class JCRecorder implements PlugIn, BIScreenGrabber {
 	private BufferedImage currImage;
 	private volatile boolean stop=false;
 	private JCRecorderBox recbox;
-	private JOGLImageCanvas dcic;
+	private JOGLImageCanvas jic;
 	private boolean crosshairs=false;
 	private int prevCrosshairs;
 	
@@ -48,9 +49,9 @@ public class JCRecorder implements PlugIn, BIScreenGrabber {
 		}
 		if(imp==null) imp=WindowManager.getCurrentImage();
 		if(imp==null) {IJ.noImage();return;}
-		dcic=JCP.getJOGLImageCanvas(imp);
-		if(dcic==null){IJ.showMessage("Image is not DeepColor");return;}
-		dcic.icc.getParent().requestFocus();
+		jic=JCP.getJOGLImageCanvas(imp);
+		if(jic==null){IJ.showMessage("Image is not a JOGL Canvas");return;}
+		jic.icc.getParent().requestFocus();
 		prevCrosshairs=JCP.drawCrosshairs;
 		JCP.drawCrosshairs=0;
 		recbox=new JCRecorderBox(this);
@@ -67,7 +68,7 @@ public class JCRecorder implements PlugIn, BIScreenGrabber {
     
     public void stop() {
     	stop=true;
-        dcic.setBIScreenGrabber(null);
+        jic.setBIScreenGrabber(null);
     }
 	
 	public void startSaving() {
@@ -75,7 +76,7 @@ public class JCRecorder implements PlugIn, BIScreenGrabber {
 		saving.set(true);
 		recbox.setStopEnabled(true);
 		recbox.setStartEnabled(false);
-		dcic.setBIScreenGrabber(this);
+		jic.setBIScreenGrabber(this);
 		stop=false;
 		(new Thread() {
 			public void run() {
@@ -88,8 +89,8 @@ public class JCRecorder implements PlugIn, BIScreenGrabber {
 				ImageStack newimgst=null;
 				String title;
 				int tn=0;
-				do{tn++;title=dcic.getImage().getTitle()+"-rec"+IJ.pad(tn, 2);}while(WindowManager.getImage(title)!=null);
-				dcic.repaint();
+				do{tn++;title=jic.getImage().getTitle()+"-rec"+IJ.pad(tn, 2);}while(WindowManager.getImage(title)!=null);
+				jic.repaint();
 
 		        while ((waitTime<(60L*1000000000L)) && !stop) {
 		        	if(updated) {
@@ -97,13 +98,12 @@ public class JCRecorder implements PlugIn, BIScreenGrabber {
 			        	elapsedTime=System.nanoTime();
 			        	mystatus="Frame: "+(fn++)+" Time: "+(((float)elapsedTime-(float)startTime)/1000000000f)+"s";
 			        	recbox.setStatus(mystatus);
-			        	ImagePlus adderimg=new ImagePlus("add image",currImage);
+						ColorProcessor ip=new ColorProcessor(currImage);
 			        	if(start) {
-			        		newimgst=new ImageStack(adderimg.getWidth(),adderimg.getHeight());
+			        		newimgst=new ImageStack(ip.getWidth(),ip.getHeight());
 			        		start=false;
 			        	}
-		        		newimgst.addSlice(mystatus, adderimg.getProcessor());
-		    			adderimg.close();
+		        		newimgst.addSlice(mystatus, ip);
 			        	updated=false;
 		        	}else {
 		        		waitTime=System.nanoTime()-elapsedTime;
@@ -133,8 +133,8 @@ public class JCRecorder implements PlugIn, BIScreenGrabber {
 		recbox.setStopEnabled(true);
 		recbox.setStartEnabled(false);
 		b.setEnabled(false);
-		dcic.setBIScreenGrabber(this);
-		ImagePlus imp=dcic.getImage();
+		jic.setBIScreenGrabber(this);
+		ImagePlus imp=jic.getImage();
 		boolean dofrmst=false;
 		if(imp.getNFrames()>1) {
 			YesNoCancelDialog yn=new YesNoCancelDialog(recbox, "Multi frames", "Do all frames?", "All frames", "Just Frame "+imp.getT());
@@ -162,29 +162,28 @@ public class JCRecorder implements PlugIn, BIScreenGrabber {
 				ImageStack newimgst=null;
 				String title;
 				int tn=0;
-				ImagePlus imp=dcic.getImage();
+				ImagePlus imp=jic.getImage();
 				do{tn++;title=imp.getTitle()+"-genstack"+IJ.pad(tn, 2);}while(WindowManager.getImage(title)!=null);
-				dcic.setOne3Dslice(true);
-				float slice=2f*dcic.zmax/imp.getNSlices();
-				//float[] preveas=dcic.getEulerAngles();
-
+				jic.setOne3Dslice(true);
+				float slice=2f*jic.zmax/imp.getNSlices();
+				//float[] preveas=jic.getEulerAngles();
 				int endfr=imp.getT(),stfr=endfr-1;
 				if(dofrms) {stfr=0;endfr=imp.getNFrames();}
-				float[] eas=dcic.getEulerAngles();
+				float[] eas=jic.getEulerAngles();
 				float[] rotation=(new Matrix4f()).setToRotationEuler(eas[1]*FloatUtil.PI/180f, eas[0]*FloatUtil.PI/180f, eas[2]*FloatUtil.PI/180f).get(new float[16]);
 				float[] vecs=new float[] {
-						-1f,-1f,dcic.zmax, 0f,
-						1f,-1f,dcic.zmax, 0f,
-						-1f,1f,dcic.zmax, 0f,
-						1f,1f,dcic.zmax, 0f,
-						-1f,-1f,-dcic.zmax, 0f,
-						1f,-1f,-dcic.zmax, 0f,
-						-1f,1f,-dcic.zmax, 0f,
-						1f,1f,-dcic.zmax, 0f,
+						-1f,-1f,jic.zmax, 0f,
+						1f,-1f,jic.zmax, 0f,
+						-1f,1f,jic.zmax, 0f,
+						1f,1f,jic.zmax, 0f,
+						-1f,-1f,-jic.zmax, 0f,
+						1f,-1f,-jic.zmax, 0f,
+						-1f,1f,-jic.zmax, 0f,
+						1f,1f,-jic.zmax, 0f,
 						};
 				float[] vec=new float[4];
 				float[] ans=new float[4];
-				float max=-dcic.zmax;
+				float max=-jic.zmax;
 				for(int i=0;i<(vecs.length/4);i++) {
 					vec[0]=vecs[i*4+0]; vec[1]=vecs[i*4+1]; vec[2]=vecs[i*4+2]; vec[3]=vecs[i*4+3];
 					FloatUtil.multMatrixVec(rotation, vec, ans);
@@ -196,8 +195,8 @@ public class JCRecorder implements PlugIn, BIScreenGrabber {
 					for(float z=-max;z<max;z+=slice) {
 						if(stop)break;
 						float front=z+slice/2f;
-						dcic.setNearFar(new float[] {front,front+2f/imp.getWidth()});
-						dcic.repaint();
+						jic.setNearFar(new float[] {front,front+2f/imp.getWidth()});
+						jic.repaint();
 				        do{
 				        	// sleep for min frame rate milliseconds
 				        	//try {
@@ -230,9 +229,9 @@ public class JCRecorder implements PlugIn, BIScreenGrabber {
 					if(stop)break;
 				}
 
-				dcic.setNearFar(new float[] {-2f,2f});
-				dcic.setOne3Dslice(false);
-				dcic.repaint();
+				jic.setNearFar(new float[] {-2f,2f});
+				jic.setOne3Dslice(false);
+				jic.repaint();
         		(new ImagePlus(title,newimgst)).show();
 		        saving.set(false);
 		        stop=false;
