@@ -664,14 +664,14 @@ public class JOGLImageCanvas extends ImageCanvas implements GLEventListener, Ima
 		
 		if(!sb.isSliceUpdated(sl, fr)){
 			if(go3d) {
+				int slicesize=imageWidth*imageHeight;
+				if(undersample>1) slicesize=(imageWidth/undersample)*(imageHeight/undersample);
 				for(int i=0;i<chs;i++){ 
-					for(int ifr=0;ifr<frms;ifr++) {
+					for(int ifr=Math.max(0,fr-4);ifr<Math.min(frms,fr+4-(((fr-4)<0)?(fr-4):0));ifr++) {
 						for(int isl=0;isl<sls;isl++) {
 							if(!sb.isSliceUpdated(isl, ifr)) {
 								Buffer slicebuffer=sb.getSliceBuffer(i+1, isl+1, ifr+1);
-								int slicesize=imageWidth*imageHeight;
 								if(undersample>1) {
-									slicesize=(imageWidth/undersample)*(imageHeight/undersample);
 									slicebuffer=sb.convertForUndersample(slicebuffer.array(), imageWidth, imageHeight, undersample);
 								}
 								glos.getPbo("image").updateSubRgbaPBO(ifr*chs+i, slicebuffer,0, isl*slicesize, slicesize, sls*slicesize);
