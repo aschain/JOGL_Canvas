@@ -39,8 +39,8 @@ When 3D is on, right click and then drag to rotate the view. Regular clicks will
 |Other Options| What it does|
 |------------------|--------|
 |Fullscreen| Puts the canvas into a GL fullscreen mode, press Esc to exit|
-|Resizable Mirror| If a JOGLCanvas Mirror, allows you to resize instead of locking to the original's size|
-|Toggle Left Click 3D Control| If a JOGLCanvas Mirror, allows use of left-click to rotate the view|
+|Resizable Mirror| For JOGLCanvas Mirror only, allows you to resize instead of locking to the original's size|
+|Toggle Left Click 3D Control| For JOGLCanvas Mirror only, allows use of left-click to rotate the view instead of right-click (Rois must be drawn on the original image)|
 |JOGL Canvas Preferences| Opens the preferences|
 |Revert to Normal Window| Switches back to ImageCanvas or closes the mirror window|
 
