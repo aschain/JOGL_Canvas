@@ -1,6 +1,20 @@
 package ajs.joglcanvas;
 
-import static com.jogamp.opengl.GL3.*;
+import static com.jogamp.opengl.GL.GL_ARRAY_BUFFER;
+import static com.jogamp.opengl.GL.GL_BLEND;
+import static com.jogamp.opengl.GL.GL_ELEMENT_ARRAY_BUFFER;
+import static com.jogamp.opengl.GL.GL_EQUAL;
+import static com.jogamp.opengl.GL.GL_FLOAT;
+import static com.jogamp.opengl.GL.GL_INCR;
+import static com.jogamp.opengl.GL.GL_KEEP;
+import static com.jogamp.opengl.GL.GL_LINE_LOOP;
+import static com.jogamp.opengl.GL.GL_LINE_STRIP;
+import static com.jogamp.opengl.GL.GL_MULTISAMPLE;
+import static com.jogamp.opengl.GL.GL_STENCIL_BUFFER_BIT;
+import static com.jogamp.opengl.GL.GL_STENCIL_TEST;
+import static com.jogamp.opengl.GL.GL_TRIANGLES;
+import static com.jogamp.opengl.GL.GL_TRIANGLE_FAN;
+import static com.jogamp.opengl.GL.GL_TRIANGLE_STRIP;
 
 import java.awt.Color;
 import java.awt.Font;
@@ -377,24 +391,10 @@ public class RoiGLDrawUtility {
 	}
 	
 	/**
-	 * Image x coordinate to screen coordinate
-	 */
-	private int sxi(float x) {
-		return (int)((x-offx)*mag);
-	}
-	
-	/**
-	 * Image y coordinate to screen coordinate
-	 */
-	private int syi(float y) {
-		return (int)((y-offy)*mag);
-	}
-	
-	/**
 	 * screen x coordinate (not image) to gl
 	 */
 	private float sglx(float x) {
-		return ((x+1f)/dw*2f-1f);
+		return ((x)/dw*2f-1f);
 	}
 	
 	/**
@@ -531,19 +531,21 @@ public class RoiGLDrawUtility {
 		//gl.glEnable(GL_MULTISAMPLE);
 		n++;
 		x+=0.5f; y+=0.5f;
+		float sx=sx(x), sy=sy(y);
 		gl.glLineWidth(dpimag);
-		final int TINY=1, SMALL=3, MEDIUM=5, LARGE=7, EXTRA_LARGE=11, XXL=17, XXXL=25;
+		final float TINY=1, SMALL=3, MEDIUM=5, LARGE=7, EXTRA_LARGE=11, XXL=17, XXXL=25;
 		final int HYBRID=PointRoi.HYBRID, CROSS=PointRoi.CROSS, DOT=PointRoi.DOT, CIRCLE=PointRoi.CIRCLE;
-		int sizei=3;
+		float size=3f;
 		switch(roi.getSize()) {
-			case 0: sizei=TINY; break;
-			case 1: sizei=SMALL; break;
-			case 2: sizei=MEDIUM; break;
-			case 3: sizei=LARGE; break;
-			case 4: sizei=EXTRA_LARGE; break;
-			case 5: sizei=XXL; break;
-			case 6: sizei=XXXL; break;
+			case 0: size=TINY; break;
+			case 1: size=SMALL; break;
+			case 2: size=MEDIUM; break;
+			case 3: size=LARGE; break;
+			case 4: size=EXTRA_LARGE; break;
+			case 5: size=XXL; break;
+			case 6: size=XXXL; break;
 		}
+		float size2=(float)Math.floor(size/2);
 		Color strokeColor=roi.getStrokeColor();
 		Color color = strokeColor!=null?strokeColor:Roi.getColor();
 		if (roi.isActiveOverlayRoi()) {
@@ -565,52 +567,61 @@ public class RoiGLDrawUtility {
 		if(anacolor!=null)color=anacolor;
 		if (type==HYBRID || type==CROSS) {
 			float width=1f;
-			if(sizei>XXL)
+			if(size>XXL)
 				width=5f;
-			else if (sizei>LARGE)
+			else if (size>LARGE)
 				width=3f;
-			drawWideLine(sxi(x)-(sizei+2)-1f, syi(y), sxi(x)+(sizei+2), syi(y), z, width, type==HYBRID?Color.WHITE:color);
-			drawWideLine(sxi(x), syi(y)-(sizei+2)-1f, sxi(x), syi(y)+(sizei+2), z, width, type==HYBRID?Color.WHITE:color);
+			drawWideLine(sx-(size+2f), sy, sx+(size+2f)+1f, sy, z, width, type==HYBRID?Color.WHITE:color);
+			drawWideLine(sx+0.5f, sy-(size+2f)+0.5f, sx+0.5f, sy+(size+2f)+1.5f, z, width, type==HYBRID?Color.WHITE:color);
 		}
 		boolean ms=false;
-		if (type!=CROSS && sizei>SMALL){
+		if (type!=CROSS && size>SMALL){
 			ms=gl.glIsEnabled(GL_MULTISAMPLE);
 			gl.glEnable(GL_MULTISAMPLE);
 		}
 		if (type==HYBRID || type==DOT) { 
-			if (sizei>LARGE)
+			if (size>LARGE)
 				gl.glLineWidth(dpimag);
-			if (sizei>LARGE && type==DOT)
-				fillOval(sxi(x)-sizei/2, syi(y)-sizei/2, sizei, sizei, z, color);
-			else if (sizei>LARGE && type==HYBRID)
-				drawHandle(x,y,z,sizei-4,color, false);
-			else if (sizei>SMALL && type==HYBRID)
-				drawHandle(x,y,z,sizei-1,color, false);
+			if (size>=LARGE && type==DOT)
+				fillOval((int)(sx-size2), (int)(sy-size2), (int)size+1, (int)size+1, z, color);
+			else if (size>LARGE && type==HYBRID)
+				drawHandle(x,y,z,(int)size-3,color, false);
+			else if (size>SMALL && type==HYBRID)
+				drawHandle(x,y,z,(int)size-1,color, false);
 			else
-				drawHandle(x,y,z,sizei,color, false);
+				drawHandle(x,y,z,(int)size,color, false);
 		}
 		int nPoints=roi.getNCoordinates();
-		if ((sizei>TINY||type==DOT) && (type==HYBRID||type==DOT)) {
-			if (sizei>LARGE && type==HYBRID)
-				drawOval(sxi(x)-(sizei/2), syi(y)-(sizei/2), (sizei-2), (sizei-2), z, Color.black);
-			else if (sizei>SMALL && type==HYBRID)
-				drawOval(sxi(x)-sizei/2-1, syi(y)-sizei/2-1, (sizei), (sizei), z, Color.black);
+		if (type==DOT || (type==HYBRID && size>TINY)) {
+			if (size>LARGE && type==HYBRID)
+				drawOval((int)(sx-size2+1), (int)(sy-size2)+1, (int)(size-2), (int)(size-2), z, Color.black);
+			else if (size>SMALL && type==HYBRID)
+				drawOval((int)(sx-size2), (int)(sy-size2), (int)size, (int)size, z, Color.black);
 			else
-				drawOval(sxi(x)-(sizei/2), syi(y)-(sizei/2), (sizei+2), (sizei+2), z, Color.black);
+				drawOval((int)(sx-size2)-1, (int)(sy-size2)-1, (int)(size+2), (int)(size+2), z, Color.black);
 		}
 		if (type==CIRCLE) {
-			int scaledSize = (sizei+1);
-			if (sizei>LARGE)
+			int scaledSize = (int)(size+1);
+			if (size>LARGE)
 				gl.glLineWidth(2f*dpimag);
-			drawOval(sxi(x)-scaledSize, syi(y)-scaledSize, scaledSize, scaledSize, z, color);
+			drawOval((int)(sx-scaledSize), (int)(sy-scaledSize), scaledSize, scaledSize, z, color);
 		}
-		//int fontSize=9;
+		
 		if (roi.getShowLabels() && nPoints>1) {
-			int offset = 2;
+			int xoffset = 1;
+			if(size>=LARGE)xoffset=roi.getSize();
+			if(size==XXXL)xoffset=7;
+			int yoffset = xoffset;
+			if(size>=LARGE)yoffset-=1;
+			int fontSize=8;
+			float scale = size>=(float)XXL?2f:1.5f;
+			fontSize += (int)(Math.round(scale*roi.getSize()));
+			Font font = new Font("SansSerif", Font.PLAIN, fontSize);
+			float tx=sglx(sx+xoffset+1), ty=sgly(sy+yoffset+1);;
 			if (nCounters==1) {
-				drawString(""+n, color, sglx(sxi(x)+offset), sgly(syi(y)+(offset)), z); //y offset +fontSize;
+				drawString(""+n, color, tx, ty, z, font); //y offset +fontSize;
 			} else if (counters!=null) {
-				drawString(""+counters[n-1], getPointColor(counters[n-1]), sglx(sx(x)+offset), sgly(sy(y)+(offset)), z);//y offset +fontSize
+				drawString(""+counters[n-1], getPointColor(counters[n-1]), tx, ty, z, font);//y offset +fontSize
 			}
 		}
 		if(!ms)gl.glDisable(GL_MULTISAMPLE);
@@ -790,7 +801,7 @@ public class RoiGLDrawUtility {
 	
 	/** FloatPolygon has coordinates in IMAGEJ (NOT opengl -1 to 1) except z*/
 	private void drawGLFP(int GLtypetodraw, FloatPolygon fp, float z, Color color) {
-		drawGL(getGLCoords(fp,z,false), color,GLtypetodraw);
+		drawGL(getGLCoords(fp,z,false), color, GLtypetodraw);
 	}
 	
 	private static FloatPolygon getOvalFloatPolygon(OvalRoi roi) {
@@ -965,10 +976,6 @@ public class RoiGLDrawUtility {
 	private void drawTextRoiString(TextRoi troi, float z, boolean isOverlay) {
 		Rectangle bounds=troi.getBounds();
 		drawTextRoiString(troi, glX(bounds.x), glY(bounds.y), z, false);
-	}
-	
-	private void drawString(String text, Color color, float x, float y, float z) {
-		drawString(text, color, x, y, z, new Font("SansSerif", Font.PLAIN, 12));
 	}
 	
 	private void drawString(String text, Color color, float x, float y, float z, Font font) {
