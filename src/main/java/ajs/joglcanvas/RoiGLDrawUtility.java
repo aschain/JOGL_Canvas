@@ -617,12 +617,16 @@ public class RoiGLDrawUtility {
 			float scale = size>=(float)XXL?2f:1.5f;
 			fontSize += (int)(Math.round(scale*roi.getSize()));
 			Font font = new Font("SansSerif", Font.PLAIN, fontSize);
-			float tx=sglx(sx+xoffset+1), ty=sgly(sy+yoffset+1);;
+			float tx=sglx(sx+xoffset+1), ty=sgly(sy+yoffset+1);
+			String label = ""+n;
+			Color labelColor = color;
 			if (nCounters==1) {
-				drawString(""+n, color, tx, ty, z, font); //y offset +fontSize;
 			} else if (counters!=null) {
-				drawString(""+counters[n-1], getPointColor(counters[n-1]), tx, ty, z, font);//y offset +fontSize
+				label = ""+counters[n-1];
+				labelColor = getPointColor(counters[n-1]);
 			}
+			labelColor = new Color(labelColor.getRed(), labelColor.getGreen(), labelColor.getBlue(), 255);
+			drawString(label, labelColor, tx, ty, z, font);
 		}
 		if(!ms)gl.glDisable(GL_MULTISAMPLE);
 	}
