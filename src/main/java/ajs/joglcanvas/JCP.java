@@ -88,14 +88,6 @@ public class JCP implements PlugIn {
 	public static boolean quiet=Prefs.get("ajs.joglcanvas.quiet", false);
 	public static boolean debug=false;
 	public static float zNear=-2f, zFar=2f;
-	private static final float[][] duboisColors = new float[][] {
-		 {0.456f, -0.04f, -0.015f,
-		 0.5f, -0.038f, -0.021f,
-		 0.176f, -0.016f, -0.005f},
-		 
-		{-0.043f,  0.378f, -0.072f,
-		-0.088f,  0.734f, -0.113f,
-		-0.002f,  0.018f,  1.226f}};
 		
 	/**
 	 * This method gets called by ImageJ / Fiji.
@@ -866,7 +858,14 @@ public class JCP implements PlugIn {
 				{-0.011f,  0.377f, -0.026f,
 				-0.032f,  0.761f, -0.093f,
 				-0.007f,  0.009f,  1.234f}};*/
-			anaColors = duboisColors;
+			anaColors = new float[][] {
+				{0.456f, -0.04f, -0.015f,
+				0.5f, -0.038f, -0.021f,
+				0.176f, -0.016f, -0.005f},
+				
+				{-0.043f,  0.378f, -0.072f,
+				-0.088f,  0.734f, -0.113f,
+				-0.002f,  0.018f,  1.226f}};;
 		}else {
 			float lr=(float)JCP.leftAnaglyphColor.getRed()/255f, lg=(float)JCP.leftAnaglyphColor.getGreen()/255f, lb=(float)JCP.leftAnaglyphColor.getBlue()/255f,
 				rr=(float)JCP.rightAnaglyphColor.getRed()/255f, rg=(float)JCP.rightAnaglyphColor.getGreen()/255f, rb=(float)JCP.rightAnaglyphColor.getBlue()/255f;

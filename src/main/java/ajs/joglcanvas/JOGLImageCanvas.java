@@ -149,7 +149,7 @@ public class JOGLImageCanvas extends ImageCanvas implements GLEventListener, Ima
 	
 	private BIScreenGrabber screengrabber=null;
 	private RoiGLDrawUtility rgldu=null;
-	public AtomicBoolean scbrAdjusting=new AtomicBoolean(false);
+	public AtomicBoolean scbrAdjusting=new AtomicBoolean(false), mirrorPainting=new AtomicBoolean(false);
 	private CutPlanesCube cutPlanes;
 	private JCAdjuster jccpDialog,jcgDialog,jcrDialog;
 	private boolean verbose=true;
@@ -210,9 +210,13 @@ public class JOGLImageCanvas extends ImageCanvas implements GLEventListener, Ima
 				super.reshape(x,y,width, height);
 				if(! IJ.isMacOSX()) {
 					if(isMirror) {
-						if(dpimag!=1.0) {java.awt.EventQueue.invokeLater(new Runnable() {public void run() {glw.setSize((int)(width*dpimag+0.5),(int)(height*dpimag+0.5));}});}
+						if(dpimag!=1.0) {java.awt.EventQueue.invokeLater(new Runnable() {public void run() {
+							glw.setSize((int)(width*dpimag+0.5),(int)(height*dpimag+0.5));
+						}});}
 					}else {
-						if(dpimag!=1.0) {glw.setSize((int)(width*dpimag+0.5),(int)(height*dpimag+0.5));}
+						if(dpimag!=1.0) {
+							glw.setSize((int)(width*dpimag+0.5),(int)(height*dpimag+0.5));
+						}
 					}
 				}
 				Dimension s=new Dimension(width,height);
@@ -575,8 +579,8 @@ public class JOGLImageCanvas extends ImageCanvas implements GLEventListener, Ima
 
 	@Override
 	public void dispose(GLAutoDrawable drawable) {
-		log("Disposing GL Canvas");
-		System.out.println("Disposing ajs-----------------------");
+		log("Disposing JOGLCanvas");
+		System.out.println("Disposing JOGLCanvas -----------------------");
 		glw.setPointerVisible(true);
 		glos.setGL(drawable);
 		glos.dispose();
@@ -1062,6 +1066,7 @@ public class JOGLImageCanvas extends ImageCanvas implements GLEventListener, Ima
 				screengrabber.screenUpdated(bi);
 			}
 		}
+		if(isMirror && go3d)drawMirrorInfo();
 		setPaintPending(false);
 	}
 	
@@ -1387,6 +1392,7 @@ public class JOGLImageCanvas extends ImageCanvas implements GLEventListener, Ima
 	}
 	
 	class JCLayout implements LayoutManager{
+		private static final int TEXT_GAP=11;
 
 		@Override
 		public void addLayoutComponent(String name, Component comp) {
@@ -1399,8 +1405,8 @@ public class JOGLImageCanvas extends ImageCanvas implements GLEventListener, Ima
 			Dimension dim=new Dimension(0,0);
 			Insets ins=parent.getInsets();
 			Dimension cdim=parent.getComponent(0).getSize();
-			dim.width+=ins.left+ins.right+cdim.width;
-			dim.height+=ins.top+ins.bottom+cdim.height;
+			dim.width+=ins.left+ins.right+cdim.width+ImageWindow.HGAP*2;
+			dim.height+=ins.top+ins.bottom+cdim.height+ImageWindow.VGAP*2+TEXT_GAP;
 			return dim;
 		}
 		@Override
@@ -1412,7 +1418,8 @@ public class JOGLImageCanvas extends ImageCanvas implements GLEventListener, Ima
 			parent.getComponent(0).setLocation(parent.getInsets().left, parent.getInsets().top);
 			Dimension dim=parent.getSize();
 			Insets ins=parent.getInsets();
-			parent.getComponent(0).setSize(dim.width-ins.left-ins.right, dim.height-ins.top-ins.bottom);
+			parent.getComponent(0).setSize(dim.width-ins.left-ins.right-ImageWindow.HGAP*2, dim.height-ins.top-ins.bottom-ImageWindow.VGAP*2-TEXT_GAP);
+			parent.getComponent(0).setLocation(parent.getInsets().left+ImageWindow.HGAP, parent.getInsets().top+ImageWindow.VGAP+TEXT_GAP);
 			if(JCP.debug)IJ.log("JCLayout move "+parent.getComponent(0));
 		}
 		
@@ -1421,6 +1428,7 @@ public class JOGLImageCanvas extends ImageCanvas implements GLEventListener, Ima
 	private void createMirror() {
 		mirror=new Frame("JOGL-DC3D Mirror of "+imp.getTitle());
 		mirror.setLayout(new JCLayout());
+		mirror.setBackground(Color.WHITE);
 		mirror.add(icc);
 		WindowAdapter wl=new WindowAdapter() {
 			public void windowClosing(WindowEvent e) { if(JCP.debug)log("revertting"); revert(); }
@@ -1449,6 +1457,32 @@ public class JOGLImageCanvas extends ImageCanvas implements GLEventListener, Ima
 				mirror.setVisible(true);
 				IJ.wait(200);
 		        mirror.toFront();
+			}
+		});
+	}
+
+	private void drawMirrorInfo(){
+		if(mirror==null || !mirror.isVisible() || glw.isFullscreen())return;
+		if(mirrorPainting.get())return;
+		mirrorPainting.set(true);
+		java.awt.EventQueue.invokeLater(new Runnable() {
+			@Override
+			public void run() {
+				Graphics g = null;
+				if(mirror!=null && mirror.isVisible()) g=mirror.getGraphics();
+				if(g!=null) {
+					((java.awt.Graphics2D)g).setRenderingHint(java.awt.RenderingHints.KEY_TEXT_ANTIALIASING, java.awt.RenderingHints.VALUE_TEXT_ANTIALIAS_LCD_HRGB);
+					g.setColor(Color.WHITE);
+					g.fillRect(0,0, mirror.getWidth(), mirror.getHeight());
+					String line="RotX:"+Math.round(dx)+"° RotY:"+Math.round(dy)+"° RotZ:"+Math.round(dz)+"°";
+					if(supermag!=0f || magnification!=1.0)line+=" Mag:"+String.format("%.2f", (float)magnification+supermag)+"x";
+					if(tx!=0f || ty!=0f || tz!=0f)line+=" Tx:"+String.format("%.1f", tx)+" Ty:"+String.format("%.1f", ty)+" Tz:"+String.format("%.1f", tz);
+					g.setFont(new java.awt.Font("SansSerif", java.awt.Font.PLAIN, 12));
+					int x=mirror.getInsets().left+ImageWindow.HGAP+5, y=mirror.getInsets().top+11;
+					g.setColor(new Color(0,0,255,255));
+					g.drawString(line, x, y);
+				}
+				mirrorPainting.set(false);
 			}
 		});
 	}
@@ -1514,6 +1548,13 @@ public class JOGLImageCanvas extends ImageCanvas implements GLEventListener, Ima
 		if(imp==null || imp.getWindow()==null || imp.getWindow().isClosed()) {
 			dispose();
 			return;
+		}else{
+			if(jccpDialog!=null)jccpDialog.dispose();
+			if(jcgDialog!=null)jcgDialog.dispose();
+			if(jcrDialog!=null)jcrDialog.dispose();
+			jccpDialog=null;
+			jcgDialog=null;
+			jcrDialog=null;
 		}
 		if(!isMirror) {
 			glw.destroy();
@@ -1618,7 +1659,7 @@ public class JOGLImageCanvas extends ImageCanvas implements GLEventListener, Ima
 			if(JCP.debug)log("sms icc w"+icc.getWidth()+" h"+icc.getHeight()+" -> w"+width+" h"+height);
 			java.awt.Insets ins=mirror.getInsets();
 			java.awt.EventQueue.invokeLater(new Runnable() {public void run() {
-				mirror.setSize(width+ins.left+ins.right,height+ins.top+ins.bottom);
+				mirror.setSize(width+ins.left+ins.right+ImageWindow.HGAP*2,height+ins.top+ins.bottom+ImageWindow.VGAP*2+11);
 				if(JCP.debug)IJ.log("setMirrorSize done");
 			}});
 		}
@@ -1657,6 +1698,9 @@ public class JOGLImageCanvas extends ImageCanvas implements GLEventListener, Ima
 	
 	@Override
 	public void paint(Graphics g) {
+		/**Only perform java painting if the canvas is a mirror
+		 * (Otherwise painting is done solely in JOGL)
+		 */
 		if(isMirror) {
 			super.paint(g);
 			if(onScreenMirrorCursor && oicp!=null) {

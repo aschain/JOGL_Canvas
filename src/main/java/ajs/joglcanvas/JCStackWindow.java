@@ -29,21 +29,14 @@ public class JCStackWindow extends StackWindow {
 			Container c=this;
 			if(c instanceof JFrame)c=((JFrame)c).getContentPane();
 	        Component[] wincs=c.getComponents();
-	        
 	        for(int i=0;i<wincs.length;i++) {
-	        		if(wincs[i] instanceof JOGLImageCanvas) {c.remove(i); c.add(jic.icc, i);}
+	        	if(wincs[i] instanceof JOGLImageCanvas) {c.remove(i); c.add(jic.icc, i);}
 	        }
 			repaint();
 			if(JCP.mouseWheelFix)jic.addMouseWheelListener(this);
 		}
 		setTitle(imp.getTitle());
 		addAdjustmentListening();
-		java.awt.EventQueue.invokeLater(new Runnable() {
-			@Override
-			public void run() {
-				showMenuButton(true);
-			}
-		});
 	}
 	
 	@Override
@@ -57,12 +50,26 @@ public class JCStackWindow extends StackWindow {
 		if(imp.getWindow()==this) ((JOGLImageCanvas) imp.getCanvas()).dispose();
 		return super.close();
 	}
+
+	@Override
+	public void drawInfo(java.awt.Graphics g) {
+		super.drawInfo(g);
+		if(jic.isMirror && !jic.go3d) {
+			drawInfoOnMirror();
+		}
+	}
+
+	public void drawInfoOnMirror(){
+		java.awt.Graphics jg = jic.mirror.getGraphics();
+		jg.setColor(java.awt.Color.WHITE);
+		jg.fillRect(0, 0, jic.mirror.getWidth(), jic.mirror.getHeight());
+		super.drawInfo(jg);
+	}
 	
 	private void addAdjustmentListening() {
 		if(imp==null || imp.getWindow()==null) {JOGLImageCanvas.log("JOGLCanvas was created but no ImagePlus Window was found"); return;}
-		if(imp.getWindow().getClass().getSimpleName().equals("ImageWindow"))return; //Don't need for ImageWindow
-		StackWindow stwin=(StackWindow) imp.getWindow();
-		Component[] comps=stwin.getComponents();
+		if(imp.getStackSize()==1)return; //Don't need if no stack
+		Component[] comps=getComponents();
 		for(int i=0;i<comps.length;i++) {
 			if(comps[i] instanceof ScrollbarWithLabel) {
 				ScrollbarWithLabel scr=(ScrollbarWithLabel)comps[i];
