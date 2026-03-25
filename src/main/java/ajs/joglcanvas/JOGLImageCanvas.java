@@ -1066,7 +1066,7 @@ public class JOGLImageCanvas extends ImageCanvas implements GLEventListener, Ima
 				screengrabber.screenUpdated(bi);
 			}
 		}
-		//if(isMirror && go3d)mirror.repaint();
+		if(isMirror && go3d)mirror.draw3DMirrorInfo();
 		setPaintPending(false);
 	}
 	
