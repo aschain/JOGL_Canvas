@@ -18,7 +18,6 @@ import java.awt.geom.Point2D;
 import java.awt.geom.Rectangle2D;
 import java.awt.CheckboxMenuItem;
 import java.awt.Color;
-import java.awt.Component;
 import java.awt.Container;
 import java.awt.Cursor;
 import java.awt.Dimension;
@@ -28,7 +27,6 @@ import java.awt.GraphicsConfiguration;
 import java.awt.GraphicsDevice;
 import java.awt.GraphicsEnvironment;
 import java.awt.Insets;
-import java.awt.LayoutManager;
 import java.awt.Menu;
 import java.awt.MenuItem;
 import java.awt.MouseInfo;
@@ -39,7 +37,6 @@ import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 import java.awt.event.ItemEvent;
 import java.awt.event.ItemListener;
-import java.awt.event.KeyAdapter;
 import java.awt.event.KeyEvent;
 import java.awt.event.KeyListener;
 import java.awt.event.MouseAdapter;
@@ -48,8 +45,6 @@ import java.awt.event.MouseListener;
 import java.awt.event.MouseMotionListener;
 import java.awt.event.MouseWheelEvent;
 import java.awt.event.MouseWheelListener;
-import java.awt.event.WindowAdapter;
-import java.awt.event.WindowEvent;
 import java.awt.image.BufferedImage;
 import java.nio.Buffer;
 import java.nio.FloatBuffer;
@@ -151,7 +146,8 @@ public class JOGLImageCanvas extends ImageCanvas implements GLEventListener, Ima
 	private RoiGLDrawUtility rgldu=null;
 	public AtomicBoolean scbrAdjusting=new AtomicBoolean(false);
 	private CutPlanesCube cutPlanes;
-	private JCAdjuster jccpDialog,jcgDialog,jcrDialog;
+	private JCCutPlanes jccpDialog;
+	private JCAdjuster jcgDialog,jcrDialog;
 	private boolean verbose=true;
 	private final JOGLEventAdapter joglEventAdapter;
 	private Keypresses kps;
@@ -616,7 +612,10 @@ public class JOGLImageCanvas extends ImageCanvas implements GLEventListener, Ima
 		if(go3d&&sls==1)go3d=false;
 		imageState.check(dx,dy,dz);
 		boolean needDraw=false;
-		if(imageState.isChanged.srcRect) resetGlobalMatrices(drawable);
+		if(imageState.isChanged.srcRect) {
+			resetGlobalMatrices(drawable);
+			if(jccpDialog!=null && jccpDialog.constrainToZoom)jccpDialog.constrainToZoom(false);
+		}
 		
 		glos.setGL(drawable);
 		
@@ -1066,7 +1065,7 @@ public class JOGLImageCanvas extends ImageCanvas implements GLEventListener, Ima
 				screengrabber.screenUpdated(bi);
 			}
 		}
-		if(isMirror && go3d)mirror.draw3DMirrorInfo();
+		if(isMirror && go3d && mirror!=null)mirror.draw3DMirrorInfo();
 		setPaintPending(false);
 	}
 	
@@ -1131,7 +1130,7 @@ public class JOGLImageCanvas extends ImageCanvas implements GLEventListener, Ima
 	}
 	public float[] getGamma() {return gamma;}
 
-	public void updateCutPlanesCube(int[] c) {
+	public void updateCutPlanesCube(int[] c, boolean withRepaint) {
 		if(c==null || c.length<6)return;
 		int i=0;
 		if(cutPlanes.x==c[i++] &&
@@ -1141,7 +1140,7 @@ public class JOGLImageCanvas extends ImageCanvas implements GLEventListener, Ima
 		cutPlanes.h==c[i++] &&
 		cutPlanes.d==c[i++])return;
 		cutPlanes.updateCube(c);
-		repaint();
+		if(withRepaint)repaint();
 	}
 	
 	public void setCutPlanesApplyToRoi(boolean update) {cutPlanes.applyToRoi=update; repaint();}
