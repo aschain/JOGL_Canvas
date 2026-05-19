@@ -75,7 +75,7 @@ public class JOGLEventAdapter implements MouseListener, KeyListener {
 	
 	public java.awt.event.MouseEvent getDejustedMouseEvent(java.awt.event.MouseEvent ae){
 		if(adjRect==null)return ae;
-		return new java.awt.event.MouseEvent((Component)ae.getSource(), ae.getID(), ae.getWhen(), ae.getModifiers(), getDejustedX(ae.getX()),
+		return new java.awt.event.MouseEvent((Component)ae.getSource(), ae.getID(), ae.getWhen(), ae.getModifiersEx(), getDejustedX(ae.getX()),
 				getDejustedY(ae.getY()), ae.getXOnScreen(), ae.getYOnScreen(), ae.getClickCount(), ae.isPopupTrigger(), ae.getButton());
 	}
 	

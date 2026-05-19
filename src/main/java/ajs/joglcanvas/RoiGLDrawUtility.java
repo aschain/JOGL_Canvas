@@ -29,15 +29,6 @@ import com.jogamp.opengl.GL2GL3;
 import com.jogamp.opengl.GLAutoDrawable;
 import com.jogamp.opengl.util.GLBuffers;
 import com.jogamp.opengl.util.texture.awt.AWTTextureIO;
-//import com.jogamp.opengl.GL2ES2;
-//import com.jogamp.opengl.fixedfunc.GLMatrixFunc;
-//import com.jogamp.opengl.util.PMVMatrix;
-//import com.jogamp.graph.curve.Region;
-//import com.jogamp.graph.curve.opengl.RegionRenderer;
-//import com.jogamp.graph.curve.opengl.RenderState;
-//import com.jogamp.graph.curve.opengl.TextRegionUtil;
-//import com.jogamp.graph.font.FontFactory;
-//import com.jogamp.graph.geom.SVertex;
 
 import ajs.joglcanvas.JCGLObjects.JCBuffer;
 import ajs.joglcanvas.JCGLObjects.JCProgram;
@@ -65,10 +56,9 @@ public class RoiGLDrawUtility {
 	float mag;
 	boolean go3d;
 	Color anacolor=null;
-	float dpimag=1f;
 	private JCBuffer[] buffers=new JCBuffer[2];
 
-	public RoiGLDrawUtility(ImagePlus imp, GLAutoDrawable drawable, JCProgram program, double dpimag) {
+	public RoiGLDrawUtility(ImagePlus imp, GLAutoDrawable drawable, JCProgram program) {
 		this.imp=imp;
 		rglos= new JCGLObjects(drawable);
 		rglos.newBuffer(GL_ARRAY_BUFFER, "roiGL");
@@ -83,7 +73,6 @@ public class RoiGLDrawUtility {
 		rglos.programs.put("text",program);
 		updateSrcRect();
 		setGL(drawable);
-		setDPI((float)dpimag);
 	}
 	
 	private void updateSrcRect() {
@@ -119,10 +108,6 @@ public class RoiGLDrawUtility {
 			buffers[0].bindBuffer(1, null);
 			buffers[1].bindBuffer(2, null);
 		}
-	}
-	
-	public void setDPI(float dpi) {
-		dpimag=dpi;
 	}
 
 	/**
@@ -167,7 +152,6 @@ public class RoiGLDrawUtility {
 		}
 		setGL(drawable);
 		updateSrcRect();
-		gl.glLineWidth(dpimag);
 		boolean drawHandles=!isOverlay;
 		//if(isRoi && roi.getState()==Roi.CONSTRUCTING)drawHandles=false;
 
@@ -463,7 +447,6 @@ public class RoiGLDrawUtility {
 	 */
 	public void drawGLfb(GLAutoDrawable drawable, FloatBuffer fb, int toDraw) {
 		setGL(drawable);
-		if(toDraw==GL_LINE_LOOP || toDraw==GL_LINE_STRIP)gl.glLineWidth(dpimag);
 		rglos.useProgram("color");
 		if(rglos.glver==2) {
 			buffers[0].bindBuffer(1, rglos.getProgram("color"));
@@ -496,7 +479,6 @@ public class RoiGLDrawUtility {
 	private void drawHandle(float x, float y, float z, int hsi, Color color, boolean border) {
 		int hs=(int)((float)hsi/(2*(((1f/px)<128f)?2f:1f)));
 		
-		gl.glLineWidth(dpimag);
 		float[] coords={
 				sglx(sx(x)-hs), sgly(sy(y)-hs), z,
 				sglx(sx(x)+hs), sgly(sy(y)-hs), z,
@@ -532,7 +514,6 @@ public class RoiGLDrawUtility {
 		n++;
 		x+=0.5f; y+=0.5f;
 		float sx=sx(x), sy=sy(y);
-		gl.glLineWidth(dpimag);
 		final float TINY=1, SMALL=3, MEDIUM=5, LARGE=7, EXTRA_LARGE=11, XXL=17, XXXL=25;
 		final int HYBRID=PointRoi.HYBRID, CROSS=PointRoi.CROSS, DOT=PointRoi.DOT, CIRCLE=PointRoi.CIRCLE;
 		float size=3f;
@@ -580,8 +561,6 @@ public class RoiGLDrawUtility {
 			gl.glEnable(GL_MULTISAMPLE);
 		}
 		if (type==HYBRID || type==DOT) { 
-			if (size>LARGE)
-				gl.glLineWidth(dpimag);
 			if (size>=LARGE && type==DOT)
 				fillOval((int)(sx-size2), (int)(sy-size2), (int)size+1, (int)size+1, z, color);
 			else if (size>LARGE && type==HYBRID)
@@ -603,7 +582,7 @@ public class RoiGLDrawUtility {
 		if (type==CIRCLE) {
 			int scaledSize = (int)(size+1);
 			if (size>LARGE)
-				gl.glLineWidth(2f*dpimag);
+				gl.glLineWidth(2f);
 			drawOval((int)(sx-scaledSize), (int)(sy-scaledSize), scaledSize, scaledSize, z, color);
 		}
 		
