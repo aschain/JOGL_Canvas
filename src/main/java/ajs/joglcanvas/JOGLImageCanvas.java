@@ -196,6 +196,9 @@ public class JOGLImageCanvas extends ImageCanvas implements GLEventListener, Ima
 		icc.addGLEventListener(this);
 		icc.setPreferredSize(new Dimension(imageWidth,imageHeight));
 		icc.setMinimumSize(new Dimension(10,10));
+		icc.addMouseListener(this);
+		icc.addMouseMotionListener(this);
+		icc.addKeyListener(this);
 		ImagePlus.addImageListener(this);
 		createPopupMenu();
 		if(isMirror)createMirror();
@@ -1369,12 +1372,10 @@ public class JOGLImageCanvas extends ImageCanvas implements GLEventListener, Ima
 				fsf.setSize(getWidth(), getHeight());
 				fsf.add(icc);
 			}
-			fsf.setUndecorated(true);
 			fsf.getGraphicsConfiguration().getDevice().setFullScreenWindow(fsf);
 		}else{
 			if(isMirror){
 				mirror.getGraphicsConfiguration().getDevice().setFullScreenWindow(null);
-				mirror.setUndecorated(false);
 			}else{
 				for(GraphicsDevice gd:GraphicsEnvironment.getLocalGraphicsEnvironment().getScreenDevices()) {
 					if(gd.getFullScreenWindow()!=null) {
