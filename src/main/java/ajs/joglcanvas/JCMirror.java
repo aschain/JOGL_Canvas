@@ -30,23 +30,40 @@ public class JCMirror extends Frame{
     public JCMirror(ImagePlus imp, JOGLImageCanvas jic) {
         super("JOGL-DC3D Mirror of "+imp.getTitle());
         this.jic=jic;
+		jic.mirror=this;
         this.imp=imp;
-		setLayout(new JCLayout());
-		setBackground(Color.WHITE);
-		add(jic.icc);
-		WindowAdapter wl=new WindowAdapter() {
+		addWindowListener(new WindowAdapter() {
 			public void windowClosing(WindowEvent e) {
                 if(JCP.debug) JOGLImageCanvas.log("revertting");
                 jic.revert(); 
             }
-		};
-		addWindowListener(wl);
+		});
 		addKeyListener(new KeyAdapter() {
 			@Override
 			public void keyReleased(KeyEvent e) {
 				jic.repaintLater();
 			}
 		});
+		if(jic.joglEventAdapter!=null){
+			jic.joglEventAdapter.addMouseWheelListener(new java.awt.event.MouseAdapter() {
+				@Override
+				public void mouseWheelMoved(java.awt.event.MouseWheelEvent e) {
+					ImageWindow win=imp.getWindow();
+					if(win==null)return;
+					jic.setCursor(e.getX(), e.getY(), jic.offScreenX(e.getX()), jic.offScreenY(e.getY()));
+					win.mouseWheelMoved(e);
+					jic.repaintLater();
+				}
+			});
+		}
+		setLayout(new JCLayout());
+		setBackground(Color.WHITE);
+		setVisible(true);
+		setMirrorSizeForCanvas(jic.getWidth(), jic.getHeight());
+		add(jic.icc);
+		doLayout();
+		validate();
+		toFront();
     }
 
     class JCLayout implements LayoutManager{
@@ -62,7 +79,8 @@ public class JCMirror extends Frame{
 		public Dimension preferredLayoutSize(Container parent) {
 			Dimension dim=new Dimension(0,0);
 			Insets ins=parent.getInsets();
-			Dimension cdim=parent.getComponent(0).getSize();
+			Dimension cdim=new Dimension(0,0);
+			if(parent.getComponentCount()>0) cdim=parent.getComponent(0).getSize();
 			dim.width+=ins.left+ins.right+cdim.width+ImageWindow.HGAP*2;
 			dim.height+=ins.top+ins.bottom+cdim.height+ImageWindow.VGAP*2+TEXT_GAP;
 			return dim;
@@ -73,6 +91,7 @@ public class JCMirror extends Frame{
 		}
 		@Override
 		public void layoutContainer(Container parent) {
+			if(parent.getComponentCount()==0) return;
 			parent.getComponent(0).setLocation(parent.getInsets().left, parent.getInsets().top);
 			Dimension dim=parent.getSize();
 			Insets ins=parent.getInsets();
@@ -113,6 +132,10 @@ public class JCMirror extends Frame{
 				mirrorPainting.set(false);
 			}
 		});
+	}
+
+	public void setMirrorSizeForCanvas(Dimension dim) {
+		setMirrorSizeForCanvas(dim.width, dim.height);
 	}
 	
 	public void setMirrorSizeForCanvas(int width, int height) {

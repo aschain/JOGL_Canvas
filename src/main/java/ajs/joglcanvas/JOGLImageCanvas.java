@@ -6,7 +6,6 @@ import ij.ImageListener;
 import ij.ImagePlus;
 import ij.Prefs;
 import ij.gui.ImageCanvas;
-import ij.gui.ImageWindow;
 import ij.gui.PointRoi;
 import ij.gui.Roi;
 import ij.gui.Toolbar;
@@ -39,11 +38,9 @@ import java.awt.event.ItemEvent;
 import java.awt.event.ItemListener;
 import java.awt.event.KeyEvent;
 import java.awt.event.KeyListener;
-import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
 import java.awt.event.MouseListener;
 import java.awt.event.MouseMotionListener;
-import java.awt.event.MouseWheelEvent;
 import java.awt.event.MouseWheelListener;
 import java.awt.image.BufferedImage;
 import java.nio.Buffer;
@@ -149,7 +146,7 @@ public class JOGLImageCanvas extends ImageCanvas implements GLEventListener, Ima
 	private JCCutPlanes jccpDialog;
 	private JCAdjuster jcgDialog,jcrDialog;
 	private boolean verbose=true;
-	private final JOGLEventAdapter joglEventAdapter;
+	final JOGLEventAdapter joglEventAdapter;
 	private Keypresses kps;
 	public float fov=45f;
 	public float frustumZshift;
@@ -222,11 +219,11 @@ public class JOGLImageCanvas extends ImageCanvas implements GLEventListener, Ima
 		};
 		joglEventAdapter=new JOGLEventAdapter(this, glw);
 		icc.setPreferredSize(new Dimension(imageWidth,imageHeight));
-		glw.addGLEventListener(this);
 		icc.setMinimumSize(new Dimension(10,10));
+		icc.setSize(imageWidth,imageHeight);
+		glw.addGLEventListener(this);
 		ImagePlus.addImageListener(this);
 		createPopupMenu();
-		if(isMirror)createMirror();
 		disablePopupMenu(go3d);
 	}
 	
@@ -461,6 +458,8 @@ public class JOGLImageCanvas extends ImageCanvas implements GLEventListener, Ima
 	
 	@Override
 	public void reshape(GLAutoDrawable drawable, int x, int y, int width, int height) {
+		if(width<=0 || height<=0) return;
+		
 		if(JCP.debug) log("Reshaping:x"+x+" y"+y+" w"+width+" h"+height);
 		setDPImag(drawable);
 		double ratio=1.0;
@@ -661,7 +660,7 @@ public class JOGLImageCanvas extends ImageCanvas implements GLEventListener, Ima
 		//Update Image PBO and texture if init or image changed----
 		
 		//log("miu:"+myImageUpdated+" sb.r:"+(myImageUpdated&& !imageState.isChanged.czt && !imageState.isChanged.minmax && !scbrAdjusting)+" "+imageState);
-		if(myImageUpdated && !imageState.isChanged.czt && !imageState.isChanged.minmax && !scbrAdjusting.get() && !((JCStackWindow)imp.getWindow()).getAnimate()) {
+		if(myImageUpdated && !imageState.isChanged.czt && !imageState.isChanged.minmax && !scbrAdjusting.get() && !((ij.gui.StackWindow)imp.getWindow()).getAnimate()) {
 			sb.resetSlices();
 			needDraw=true;
 			if(JCP.debug)log("myImageUpdated, no czt, minmax, scbrAdjust");
@@ -1392,29 +1391,6 @@ public class JOGLImageCanvas extends ImageCanvas implements GLEventListener, Ima
 		repaint();
 	}
 	
-	private void createMirror() {
-		mirror=new JCMirror(imp,this);
-		joglEventAdapter.addMouseWheelListener(new MouseAdapter() {
-			@Override
-			public void mouseWheelMoved(MouseWheelEvent e) {
-				ImageWindow win=imp.getWindow();
-				if(win==null)return;
-				setCursor(e.getX(), e.getY(), offScreenX(e.getX()), offScreenY(e.getY()));
-				win.mouseWheelMoved(e);
-				repaintLater();
-			}
-		});
-		java.awt.EventQueue.invokeLater(new Runnable() {
-			@Override
-			public void run() {
-				mirror.pack();
-				mirror.setVisible(true);
-				IJ.wait(200);
-		        mirror.toFront();
-			}
-		});
-	}
-	
 	public void setMirrorMagUnlock(boolean set) {
 		mirrorMagUnlock=set;
 		if(!mirrorMagUnlock)setMirrorSize(getWidth(),getHeight());
@@ -1570,7 +1546,7 @@ public class JOGLImageCanvas extends ImageCanvas implements GLEventListener, Ima
 	}
 	
 	public void setMirrorSize(int width, int height) {
-		if(mirror.getExtendedState()==Frame.MAXIMIZED_BOTH || (icc.getWidth()==width && icc.getHeight()==height))return;
+		if(mirror==null ||mirror.getExtendedState()==Frame.MAXIMIZED_BOTH || (icc.getWidth()==width && icc.getHeight()==height))return;
 		if(JCP.debug)log("sms icc w"+icc.getWidth()+" h"+icc.getHeight()+" -> w"+width+" h"+height);
 		java.awt.EventQueue.invokeLater(new Runnable() {public void run() {
 			mirror.setMirrorSizeForCanvas(width, height);

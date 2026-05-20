@@ -25,6 +25,8 @@ public class JCStackWindow extends StackWindow {
 	public JCStackWindow(ImagePlus imp, JOGLImageCanvas jic) {
 		super(imp,jic);
 		this.jic=jic;
+		setTitle(imp.getTitle());
+		addAdjustmentListening();
 		if(!jic.isMirror) {
 			Container c=this;
 			if(c instanceof JFrame)c=((JFrame)c).getContentPane();
@@ -34,9 +36,9 @@ public class JCStackWindow extends StackWindow {
 	        }
 			repaint();
 			if(JCP.mouseWheelFix)jic.addMouseWheelListener(this);
+		}else{
+			new JCMirror(imp,jic);
 		}
-		setTitle(imp.getTitle());
-		addAdjustmentListening();
 	}
 	
 	@Override
