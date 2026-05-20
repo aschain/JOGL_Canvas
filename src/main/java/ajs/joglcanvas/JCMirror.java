@@ -94,7 +94,7 @@ public class JCMirror extends Frame{
     }
 
     public void draw3DMirrorInfo(){
-		if(!isVisible() || jic.glw.isFullscreen() || mirrorPainting.get())return;
+		if(!isVisible() || jic.isFullscreen || mirrorPainting.get())return;
 		Graphics g=getGraphics();
 		if(g==null)return;
 		mirrorPainting.set(true);

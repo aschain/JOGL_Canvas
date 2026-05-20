@@ -6,7 +6,6 @@ import ij.ImageListener;
 import ij.ImagePlus;
 import ij.Prefs;
 import ij.gui.ImageCanvas;
-import ij.gui.ImageWindow;
 import ij.gui.PointRoi;
 import ij.gui.Roi;
 import ij.gui.Toolbar;
@@ -27,7 +26,6 @@ import java.awt.GraphicsEnvironment;
 import java.awt.Insets;
 import java.awt.Menu;
 import java.awt.MenuItem;
-import java.awt.MouseInfo;
 import java.awt.Point;
 import java.awt.PopupMenu;
 import java.awt.Rectangle;
@@ -38,17 +36,14 @@ import java.awt.event.ItemEvent;
 import java.awt.event.ItemListener;
 import java.awt.event.KeyEvent;
 import java.awt.event.KeyListener;
-import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
 import java.awt.event.MouseListener;
 import java.awt.event.MouseMotionListener;
-import java.awt.event.MouseWheelEvent;
 import java.awt.event.MouseWheelListener;
 import java.awt.image.BufferedImage;
 import java.nio.Buffer;
 import java.nio.FloatBuffer;
 import java.nio.ShortBuffer;
-import java.util.ArrayList;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 import javax.swing.JPopupMenu;
@@ -56,10 +51,7 @@ import javax.swing.JPopupMenu;
 import java.nio.ByteBuffer;
 
 import com.jogamp.common.nio.Buffers;
-import com.jogamp.newt.awt.NewtCanvasAWT;
-import com.jogamp.newt.opengl.GLWindow;
 import com.jogamp.newt.Display;
-import com.jogamp.newt.MonitorDevice;
 import com.jogamp.newt.NewtFactory;
 import com.jogamp.newt.Screen;
 import com.jogamp.opengl.GL2GL3;
@@ -85,7 +77,7 @@ public class JOGLImageCanvas extends ImageCanvas implements GLEventListener, Ima
 	final public GLCanvas icc;
 	final private StackBuffer sb;
 	final protected boolean isMirror;
-	private boolean isFullscreen=false;
+	boolean isFullscreen=false;
 	private JCGLObjects glos;
 	protected boolean disablePopupMenu, myImageUpdated=true, go3d=JCP.go3d;
 	private boolean deletePBOs=false, mirrorMagUnlock=false, mouseDragged=false;
@@ -1406,7 +1398,7 @@ public class JOGLImageCanvas extends ImageCanvas implements GLEventListener, Ima
 		jccpDialog=null;
 		jcgDialog=null;
 		jcrDialog=null;
-		glw.destroy();
+		icc.destroy();
 		if(mirror!=null)mirror.dispose();
 		mirror=null;
 	}
@@ -1425,17 +1417,14 @@ public class JOGLImageCanvas extends ImageCanvas implements GLEventListener, Ima
 			jcrDialog=null;
 		}
 		if(!isMirror) {
-			glw.destroy();
-		}else{
-			joglEventAdapter.removeMouseMotionListener(this);
-			joglEventAdapter.removeMouseListener(this);
+			icc.destroy();
 		}
 		if(imp!=null)JCP.switchWindow(imp, new ImageCanvas(imp));
 		if(isMirror) {
 			java.awt.EventQueue.invokeLater(new Runnable() {
 				public void run() {
 					if(JCP.debug)log("post new stackwindow, before GLW destroy");
-					if(glw!=null)glw.destroy();
+					if(icc!=null)icc.destroy();
 					if(JCP.debug)log("after GLW destroy");
 					if(mirror!=null)mirror.dispose();
 					if(JCP.debug)log("after mirror dispose");
@@ -1609,40 +1598,40 @@ public class JOGLImageCanvas extends ImageCanvas implements GLEventListener, Ima
 	/* called in super() disable so I don't have to remove them*/
 	@Override
 	public void addMouseListener(MouseListener object) {
-		if(joglEventAdapter!=null && !isMirror)joglEventAdapter.addMouseListener(object);
+		if(icc!=null && !isMirror)icc.addMouseListener(object);
 		super.addMouseListener(object);
 	}
 	@Override
 	public void addMouseMotionListener(MouseMotionListener object) {
-		if(joglEventAdapter!=null && !isMirror)joglEventAdapter.addMouseMotionListener(object);
+		if(icc!=null && !isMirror)icc.addMouseMotionListener(object);
 		super.addMouseMotionListener(object);
 	}
 	@Override
 	public void addMouseWheelListener(MouseWheelListener object) {
-		if(JCP.debug)IJ.log("adding mouse wheel listener to "+object+" and jea is null?"+(joglEventAdapter==null)+" mir"+isMirror);
-		if(joglEventAdapter!=null && !isMirror)joglEventAdapter.addMouseWheelListener(object);
+		if(JCP.debug)IJ.log("adding mouse wheel listener to "+object+" and jea is null?"+(icc==null)+" mir"+isMirror);
+		if(icc!=null && !isMirror)icc.addMouseWheelListener(object);
 		super.addMouseWheelListener(object);
 	}
 	@Override
 	public void addKeyListener(KeyListener object) {
-		if(joglEventAdapter!=null && !isMirror)joglEventAdapter.addKeyListener(object);
+		if(icc!=null && !isMirror)icc.addKeyListener(object);
 		super.addKeyListener(object);
 	}
 	
 	/*just in case*/
 	@Override
 	public void removeMouseListener(MouseListener object) {
-		if(joglEventAdapter!=null && !isMirror)joglEventAdapter.removeMouseListener(object);
+		if(icc!=null && !isMirror)icc.removeMouseListener(object);
 		else super.removeMouseListener(object);
 	}
 	@Override
 	public void removeMouseMotionListener(MouseMotionListener object) {
-		if(joglEventAdapter!=null && !isMirror)joglEventAdapter.removeMouseMotionListener(object);
+		if(icc!=null && !isMirror)icc.removeMouseMotionListener(object);
 		else super.removeMouseMotionListener(object);
 	}
 	@Override
 	public void removeKeyListener(KeyListener object) {
-		if(joglEventAdapter!=null && !isMirror)joglEventAdapter.removeKeyListener(object);
+		if(icc!=null && !isMirror)icc.removeKeyListener(object);
 		else super.removeKeyListener(object);
 	}
 	
@@ -1699,7 +1688,6 @@ public class JOGLImageCanvas extends ImageCanvas implements GLEventListener, Ima
 		if(icc==null || e.getSource()==this)super.handlePopupMenu(e);
 		else {
 			//if (disablePopupMenu) return;
-			glw.setPointerVisible(true);
 			if (IJ.debugMode) log("show popup: " + (e.isPopupTrigger()?"true":"false"));
 			Roi roi = imp.getRoi();
 			if (roi!=null && roi.getState()==Roi.CONSTRUCTING) {
@@ -1707,10 +1695,8 @@ public class JOGLImageCanvas extends ImageCanvas implements GLEventListener, Ima
 			}
 			if (dcpopup!=null) {
 				icc.add(dcpopup);
-				dcpopup.show(icc,joglEventAdapter.getDejustedX(e.getX()),joglEventAdapter.getDejustedY(e.getY()));
+				dcpopup.show(icc,e.getX(),e.getY());
 			}
-			//boolean drawCrosshairs=(JCP.drawCrosshairs>0 && oicp!=null  && (isMirror || go3d));
-			//glw.setPointerVisible(!drawCrosshairs);
 		}
 	}
 
@@ -1769,7 +1755,7 @@ public class JOGLImageCanvas extends ImageCanvas implements GLEventListener, Ima
 
 			//addMI(dcpopup, "Switch use PBO for Slices", "usePBOforSlices");
 			menu=new Menu("Other Options");
-			addCMI(menu, "Fullscreen", !(glw==null || !glw.isFullscreen()));
+			addCMI(menu, "Fullscreen", !(isFullscreen));
 			if(isMirror)addCMI(menu, "Resizable Mirror", mirrorMagUnlock);
 			if(isMirror)addMI(menu, "Toggle Left Click 3d Control", "rightclick");
 			if(imp.getNSlices()==1)addMI(menu,"Adjust Contrast/Gamma","gamma");
@@ -2016,20 +2002,8 @@ public class JOGLImageCanvas extends ImageCanvas implements GLEventListener, Ima
 				repaintLater();
 			}
 		}else if(code==KeyEvent.VK_ESCAPE) {
-			if(glw.isFullscreen())toggleFullscreen();
+			if(isFullscreen)toggleFullscreen();
 		}else {
-			/*if(key=='='||key=='-') {
-				Point loc = getCursorLoc();
-				if (!cursorOverImage()) {
-					loc.x = srcRect.x + srcRect.width/2;
-					loc.y = srcRect.y + srcRect.height/2;
-				}
-				int x = screenX(loc.x);
-				int y = screenY(loc.y);
-				ImageCanvas ic=isMirror?imp.getCanvas():this;
-				if(key=='=')ic.zoomIn(x,y);
-				else ic.zoomOut(x,y);
-			}*/
 			
 		}
 		for(char kpkey : kps.okchars) {if(kpkey==e.getKeyChar()) {
@@ -2150,11 +2124,8 @@ public class JOGLImageCanvas extends ImageCanvas implements GLEventListener, Ima
 				float xd=(float)(e.getX()-sx)/(float)srcRect.width;
 				float yd=(float)(e.getY()-sy)/(float)srcRect.height;
 				if(JCP.debug)log("Dragged "+e.getX()+"x "+e.getY()+"y  sx"+sx+" sy"+sy);
-				if(warpPointerWorks) {
-					//int wx=(int)(joglEventAdapter.getDejustedX(osx)*dpimag/surfaceScale+0.5), wy=(int)(joglEventAdapter.getDejustedY(osy)*dpimag/surfaceScale+0.5);
-					int wx=(int)(joglEventAdapter.getDejustedX(osx)), wy=(int)(joglEventAdapter.getDejustedY(osy));
-					glw.warpPointer(wx,wy);
-				}else{sx=e.getX(); sy=e.getY();}
+				sx=e.getX();
+				sy=e.getY();
 				if(alt||e.getButton()==MouseEvent.BUTTON2) {
 					if(shift) {
 						tz-=yd;
@@ -2191,12 +2162,6 @@ public class JOGLImageCanvas extends ImageCanvas implements GLEventListener, Ima
 	public void mouseReleased(MouseEvent e) {
 		if(shouldKeep(e)) {
 			if(!mouseDragged) {handlePopupMenu(e);return;}
-			//if(JCP.drawCrosshairs>0) {
-			//int wx=(int)(joglEventAdapter.getDejustedX(osx)*dpimag/surfaceScale+0.5), wy=(int)(joglEventAdapter.getDejustedY(osy)*dpimag/surfaceScale+0.5);
-			int wx=(int)(joglEventAdapter.getDejustedX(osx)), wy=(int)(joglEventAdapter.getDejustedY(osy));
-			glw.warpPointer(wx, wy);
-			if(JCP.debug)log("Pointer warped "+joglEventAdapter.getDejustedX(osx)+" "+joglEventAdapter.getDejustedY(osy));
-			//}
 		}else {
 			super.mouseReleased(e);
 		}
@@ -2210,31 +2175,24 @@ public class JOGLImageCanvas extends ImageCanvas implements GLEventListener, Ima
 	
 	@Override
 	public void mouseMoved(MouseEvent e) {
-		//if(JCP.debug)log("\\Update:MouseMoved "+e.getX()+" "+e.getY());
-		//if(shouldKeep(e)){
-		//	if(JCP.drawCrosshairs>0) {setImageCursorPosition(e, dpimag); repaintLater();}
-		//}else {
-			//if(dpimag>1.0)e=fixMouseEvent(e);
-			if(isMirror && e.getSource()==icc) {
-				onScreenMirrorCursor=true;
-			}else onScreenMirrorCursor=false;
-			boolean drawCrosshairs=(JCP.drawCrosshairs>0  && (isMirror || go3d));
-			if(drawCrosshairs) {setImageCursorPosition(e); repaintLater();}
-			super.mouseMoved(e);
+		
+		if(isMirror && e.getSource()==icc) {
+			onScreenMirrorCursor=true;
+		}else onScreenMirrorCursor=false;
+		boolean drawCrosshairs=(JCP.drawCrosshairs>0  && (isMirror || go3d));
+		if(drawCrosshairs) {setImageCursorPosition(e); repaintLater();}
+		super.mouseMoved(e);
 		//}
 	}
 	
 	@Override
 	public void mouseEntered(MouseEvent e) {
-		if(e.getSource()==icc && JCP.drawCrosshairs>0 && (isMirror || go3d)) {glw.setPointerVisible(false);}else glw.setPointerVisible(true);
-		if(e.getSource()==this)glw.setPointerVisible(true);
 		super.mouseEntered(e);
 	}
 	
 	@Override
 	public void mouseExited(MouseEvent e) {
 		oicp=null;
-		glw.setPointerVisible(true);
 		super.mouseExited(e);
 	}
 	

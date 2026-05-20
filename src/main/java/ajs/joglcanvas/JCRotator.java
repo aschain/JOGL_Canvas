@@ -136,12 +136,7 @@ public class JCRotator extends JCAdjuster implements MouseMotionListener {
 		pack();
 		setToDefaultLocation();
 		setVisible(true);
-		final JCRotator jcr=this;
-		(new Thread() {
-			public void run() {
-				new JOGLEventAdapter(jic.icc, jic.glw, null, jcr, null, null);
-			}
-		}).start();
+		jic.icc.addMouseMotionListener(this);
 	}
 	
 	public void update() {
