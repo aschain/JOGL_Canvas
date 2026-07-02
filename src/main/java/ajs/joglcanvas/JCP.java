@@ -490,12 +490,12 @@ public class JCP implements PlugIn {
 			gd.addCheckbox("Always use the selected profile?", hasPref);
 			if(hasPref)gd.addCheckbox("Clear saved profile", false);
 		}
-		gd.addMessage("For High-bit Monitors:\nChoose the color bit depths from those available\nChoices are bits for R,G,B,A respectively");
+		gd.addMessage("For High-bit (HDR) Monitors:\n  Choose the display's color bit depths from those available\n  Choices are bits for R,G,B,A respectively");
 		gd.addChoice("Bitdepths:", bitdepths.toArray(new String[bitdepths.size()]), bitdepths.get(0));
 		gd.addStringField("Or enter R,G,B,A if you are sure (e.g. 10,10,10,2)", "");
 		gd.addMessage("Service:");
 		gd.addCheckbox("Run on all opened images?", listenerInstance!=null);
-		gd.addMessage("Add to ImageJ Popup Menu:");
+		gd.addMessage("Add Menu Items to ImageJ Popup Menu:");
 		gd.addCheckbox("Convert to JOGL Canvas", hasInstalledPopup("convert"));
 		gd.addCheckbox("Add JOGL Canvas Mirror", hasInstalledPopup("mirror"));
 		gd.addMessage("Other Settings:");
