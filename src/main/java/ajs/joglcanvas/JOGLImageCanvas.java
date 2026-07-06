@@ -2207,7 +2207,7 @@ public class JOGLImageCanvas extends ImageCanvas implements GLEventListener, Ima
 						imageState.setNextSrcRect=true;
 					}else{
 						//qrot.rotateByEuler(0f, 0f, (float)Math.toRadians(yd*90f));
-						rotz=-yd/30f*rotmult;
+						rotz=-yd/1500f*rotmult;
 					}
 				}else if(shift) {
 					if(ctrl) {
@@ -2219,11 +2219,11 @@ public class JOGLImageCanvas extends ImageCanvas implements GLEventListener, Ima
 					}
 				}else {
 					//qrot.rotateByEuler((float)Math.toRadians(yd*90f), (float)Math.toRadians(xd*90f), 0f);
-					rotx=yd/30f*rotmult;
-					roty=xd/30f*rotmult;
+					rotx=yd/1500f*rotmult;
+					roty=xd/1500f*rotmult;
 				}
 				if(rotx!=0f || roty!=0f || rotz!=0f) {
-					Quaternion qrot2=new Quaternion().setFromEuler((float)Math.toRadians(rotx), (float)Math.toRadians(roty), (float)Math.toRadians(rotz));
+					Quaternion qrot2=new Quaternion().setFromEuler(rotx, roty, rotz);
 					qrot=qrot2.mult(qrot);
 				}
 			}
