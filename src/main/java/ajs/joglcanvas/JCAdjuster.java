@@ -46,7 +46,6 @@ public abstract class JCAdjuster extends PlugInDialog implements AdjustmentListe
 		if(jic.icc==null || !jic.icc.isVisible())dispose();
 	}
 	
-	@SuppressWarnings("serial")
 	class NumberScrollPanel extends ScrollbarWithLabel implements ActionListener{
 		
 		private TextField textfield;

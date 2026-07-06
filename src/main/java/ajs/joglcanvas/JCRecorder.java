@@ -148,7 +148,7 @@ public class JCRecorder implements PlugIn, BIScreenGrabber {
 			}
 			dofrmst=yn.yesPressed();
 		}
-		@SuppressWarnings("unused")
+		
 		final boolean dofrms=dofrmst;
 		stop=false;
 		(new Thread() {

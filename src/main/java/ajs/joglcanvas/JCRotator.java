@@ -13,7 +13,6 @@ import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
 import java.awt.event.MouseMotionListener;
 
-@SuppressWarnings("serial")
 public class JCRotator extends JCAdjuster implements MouseMotionListener {
 	
 	private final static char[] cps=new char[] {'X','Y','Z'};

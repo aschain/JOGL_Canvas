@@ -15,7 +15,6 @@ import java.awt.event.ItemListener;
 import java.awt.Panel;
 import ajs.joglcanvas.JOGLImageCanvas.CutPlanesCube;
 
-@SuppressWarnings("serial")
 public class JCCutPlanes extends JCAdjuster {
 	
 	int[] c=new int[6];
