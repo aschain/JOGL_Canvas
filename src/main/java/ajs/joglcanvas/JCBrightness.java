@@ -17,7 +17,6 @@ import ij.process.ImageProcessor;
 import ij.process.LUT;
 import ij.process.ShortProcessor;
 
-@SuppressWarnings("serial")
 public class JCBrightness extends JCAdjuster implements ImageListener {
 	
 	private NumberScrollPanel[] gnsps,mins,maxs;
