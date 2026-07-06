@@ -1131,6 +1131,7 @@ public class JOGLImageCanvas extends ImageCanvas implements GLEventListener, Ima
 	
 	public void setGamma(float[] gamma) {
 		this.gamma=gamma;
+		imageState.setNextSrcRect=true;
 		repaint();
 	}
 	public float[] getGamma() {return gamma;}
