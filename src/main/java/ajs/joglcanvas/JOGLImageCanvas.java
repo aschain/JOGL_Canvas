@@ -68,6 +68,8 @@ import com.jogamp.opengl.util.texture.awt.AWTTextureIO;
 import com.jogamp.opengl.GLEventListener;
 import com.jogamp.opengl.GLProfile;
 import com.jogamp.math.Matrix4f;
+import com.jogamp.math.Quaternion;
+import com.jogamp.math.Vec3f;
 import com.jogamp.math.FloatUtil;
 import com.jogamp.opengl.util.GLBuffers;
 
@@ -94,7 +96,7 @@ public class JOGLImageCanvas extends ImageCanvas implements GLEventListener, Ima
 
 	public String renderFunction=JCP.renderFunction;
 	protected int sx,sy, osx, osy;
-	protected float dx=0f,dy=0f,dz=0f, tx=0f, ty=0f, tz=0f, supermag=0f, zNear=JCP.zNear, zFar=JCP.zFar;
+	protected float tx=0f, ty=0f, tz=0f, supermag=0f, zNear=JCP.zNear, zFar=JCP.zFar;
 	private float[] gamma=null;
 	
 	protected PopupMenu dcpopup=null;
@@ -151,6 +153,8 @@ public class JOGLImageCanvas extends ImageCanvas implements GLEventListener, Ima
 	public float fov=45f;
 	public float frustumZshift;
 	public float zmax=1f;
+	private Quaternion qrot=new Quaternion().setIdentity();
+	public float rotmult=1f;
 	public GLContext context;
 	public Point2D.Double oicp=null;
 	//private long starttime=0;
@@ -611,7 +615,7 @@ public class JOGLImageCanvas extends ImageCanvas implements GLEventListener, Ima
 		int srcRectWidthMag = (int)(srcRect.width*magnification+0.5);
 		int srcRectHeightMag = (int)(srcRect.height*magnification+0.5);
 		if(go3d&&sls==1)go3d=false;
-		imageState.check(dx,dy,dz);
+		imageState.check(qrot);
 		boolean needDraw=false;
 		if(imageState.isChanged.srcRect) {
 			resetGlobalMatrices(drawable);
@@ -776,7 +780,7 @@ public class JOGLImageCanvas extends ImageCanvas implements GLEventListener, Ima
 			//and order of drawing slices depending on rotation
 			if(go3d) {
 				//Set up matricies
-				rotate=(new Matrix4f()).setToRotationEuler(dy*FloatUtil.PI/180f, dx*FloatUtil.PI/180f, dz*FloatUtil.PI/180f).get(new float[16]);
+				rotate=qrot.toMatrix(new float[16]);
 				//log("\\Update0:X x"+Math.round(100.0*matrix[0])/100.0+" y"+Math.round(100.0*matrix[1])/100.0+" z"+Math.round(100.0*matrix[2])/100.0);
 				//log("\\Update1:Y x"+Math.round(100.0*matrix[4])/100.0+" y"+Math.round(100.0*matrix[5])/100.0+" z"+Math.round(100.0*matrix[6])/100.0);
 				//log("\\Update2:Z x"+Math.round(100.0*matrix[8])/100.0+" y"+Math.round(100.0*matrix[9])/100.0+" z"+Math.round(100.0*matrix[10])/100.0);
@@ -1131,6 +1135,10 @@ public class JOGLImageCanvas extends ImageCanvas implements GLEventListener, Ima
 	}
 	public float[] getGamma() {return gamma;}
 
+	public Quaternion getRotation() {
+		return qrot;
+	}
+
 	public void updateCutPlanesCube(int[] c, boolean withRepaint) {
 		if(c==null || c.length<6)return;
 		int i=0;
@@ -1233,26 +1241,26 @@ public class JOGLImageCanvas extends ImageCanvas implements GLEventListener, Ima
 		public MinMax[] minmaxs;
 		public Calibration prevCal;
 		public int c,z,t;
-		public float odx, ody, odz;
+		public Quaternion prevRot;
 		public IsChanged isChanged=new IsChanged();
 		public boolean setNextSrcRect=false;
 		
 		public ImageState(ImagePlus imp, JOGLImageCanvas jic) {
 			this.imp=imp;
 			this.jic=jic;
-			update(0f,0f,0f);
+			update();
 		}
 		
-		public void update(float dx, float dy, float dz) {
+		public void update() {
 			prevSrcRect=(Rectangle)jic.getSrcRect().clone();
 			prevMag=jic.getMagnification();
 			minmaxs=MinMax.getMinMaxs(imp.getLuts());
 			prevCal=(Calibration)imp.getCalibration().clone();
 			c=imp.getC(); z=imp.getZ(); t=imp.getT();
-			odx=dx; ody=dy; odz=dz;
+			prevRot=new Quaternion(jic.getRotation());
 		}
 		
-		public void check(float dx, float dy, float dz) {
+		public void check(Quaternion qrot) {
 			reset();
 			isChanged.srcRect= (!prevSrcRect.equals(jic.getSrcRect())) || setNextSrcRect || prevMag!=jic.getMagnification();
 			MinMax[] newMinmaxs=MinMax.getMinMaxs(imp.getLuts());
@@ -1266,8 +1274,8 @@ public class JOGLImageCanvas extends ImageCanvas implements GLEventListener, Ima
 			isChanged.t=(t!=imp.getT());
 			isChanged.czt=(isChanged.c || isChanged.z || isChanged.t);
 			isChanged.slice=!((c==imp.getC()||imp.getCompositeMode()==IJ.COMPOSITE) && z==imp.getSlice() && t==imp.getFrame());
-			isChanged.rotation=!(dx==odx && dy==ody && dz==odz);
-			update(dx, dy, dz);
+			isChanged.rotation=!prevRot.equals(qrot);
+			update();
 			setNextSrcRect=false;
 		}
 		
@@ -2191,11 +2199,15 @@ public class JOGLImageCanvas extends ImageCanvas implements GLEventListener, Ima
 					int wx=(int)(joglEventAdapter.getDejustedX(osx)), wy=(int)(joglEventAdapter.getDejustedY(osy));
 					glw.warpPointer(wx,wy);
 				}else{sx=e.getX(); sy=e.getY();}
+				float rotx=0f, roty=0f, rotz=0f;
 				if(alt||e.getButton()==MouseEvent.BUTTON2) {
 					if(shift) {
 						tz-=yd;
 						imageState.setNextSrcRect=true;
-					}else dz+=yd*90f;
+					}else{
+						//qrot.rotateByEuler(0f, 0f, (float)Math.toRadians(yd*90f));
+						rotz=-yd*(float)Math.PI*30f*rotmult;
+					}
 				}else if(shift) {
 					if(ctrl) {
 						setSuperMag(supermag-yd*(float)magnification);
@@ -2205,12 +2217,14 @@ public class JOGLImageCanvas extends ImageCanvas implements GLEventListener, Ima
 						imageState.setNextSrcRect=true;
 					}
 				}else {
-					dx+=xd*90f;
-					dy+=yd*90f;
+					//qrot.rotateByEuler((float)Math.toRadians(yd*90f), (float)Math.toRadians(xd*90f), 0f);
+					rotx=yd*(float)Math.PI*30f*rotmult;
+					roty=xd*(float)Math.PI*30f*rotmult;
 				}
-				if(dz<0)dz+=360; if(dz>=360)dz-=360;
-				if(dx<0)dx+=360; if(dx>=360)dx-=360;
-				if(dy<0)dy+=360; if(dy>=360)dy-=360;
+				if(rotx!=0f || roty!=0f || rotz!=0f) {
+					Quaternion qrot2=new Quaternion().setFromEuler((float)Math.toRadians(rotx), (float)Math.toRadians(roty), (float)Math.toRadians(rotz));
+					qrot=qrot2.mult(qrot);
+				}
 			}
 		}else {
 			if(isMirror && e.getSource()==icc) {
@@ -2240,7 +2254,8 @@ public class JOGLImageCanvas extends ImageCanvas implements GLEventListener, Ima
 	}
 	
 	public void resetAngles() {
-		dx=0f; dy=0f; dz=0f; tx=0f; ty=0f; tz=0f; supermag=0f;
+		tx=0f; ty=0f; tz=0f; supermag=0f;
+		qrot.setIdentity();
 		repaint();
 	}
 	
@@ -2289,12 +2304,13 @@ public class JOGLImageCanvas extends ImageCanvas implements GLEventListener, Ima
 	 * @return float[]{dx, dy, dz, tx, ty, tz}
 	 */
 	public float[] getEulerAngles() {
-		return new float[] {dx,dy,dz,tx,ty,tz};
+		Vec3f euler=qrot.toEuler(new Vec3f());
+		return new float[] {(float)Math.toDegrees(euler.x()), (float)Math.toDegrees(euler.y()), (float)Math.toDegrees(euler.z()), tx, ty, tz};
 	}
 	
 	public void setEulerAngles(float[] eas) {
 		if(eas==null || eas.length!=6) {resetAngles(); return;}
-		dx=eas[0]; dy=eas[1]; dz=eas[2];
+		qrot.setFromEuler((float)Math.toRadians(eas[0]), (float)Math.toRadians(eas[1]), (float)Math.toRadians(eas[2]));
 		tx=eas[3]; ty=eas[4]; tz=eas[5];
 		imageState.setNextSrcRect=true;
 	}
