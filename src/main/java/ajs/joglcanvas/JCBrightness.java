@@ -77,10 +77,25 @@ public class JCBrightness extends JCAdjuster implements ImageListener {
 				cmins[i]=lut.min; cmaxs[i]=lut.max;
 			}
 			mins[i]=new NumberScrollPanel((float)cmins[i],(float)dmins[i],(float)dmaxs[i],'m',exp);
+			final int ii=i;
+			mins[i].getIcon().addMouseListener(new java.awt.event.MouseAdapter() {
+				@Override
+				public void mousePressed(java.awt.event.MouseEvent e) {
+					mins[ii].setFloatValue((float)cmins[ii]);
+					updateMinMaxs();
+				}
+			});
 			add(mins[i], c);
 			mins[i].setFocusable(false);
 			c.gridy++;
 			maxs[i]=new NumberScrollPanel((float)cmaxs[i],(float)dmins[i]+1f/(float)Math.pow(10f,(float)exp),(float)dmaxs[i]+1f/(float)Math.pow(10f,(float)exp),'M',exp);
+			maxs[i].getIcon().addMouseListener(new java.awt.event.MouseAdapter() {
+				@Override
+				public void mousePressed(java.awt.event.MouseEvent e) {
+					maxs[ii].setFloatValue((float)cmaxs[ii]);
+					updateMinMaxs();
+				}
+			});
 			add(maxs[i], c);
 			maxs[i].setFocusable(false);
 			mins[i].addAdjustmentListener(this);
@@ -111,6 +126,14 @@ public class JCBrightness extends JCAdjuster implements ImageListener {
 			c.anchor=GridBagConstraints.CENTER;
 			c.gridx=1;
 			gnsps[i]=new NumberScrollPanel(inits[i],0f,5.0f,'G',2);
+			final int ii=i;
+			gnsps[i].getIcon().addMouseListener(new java.awt.event.MouseAdapter() {
+				@Override
+				public void mousePressed(java.awt.event.MouseEvent e) {
+					gnsps[ii].setFloatValue(1f);
+					updateGamma();
+				}
+			});
 			add(gnsps[i], c);
 			gnsps[i].addAdjustmentListener(this);
 			gnsps[i].setFocusable(false);
@@ -120,7 +143,7 @@ public class JCBrightness extends JCAdjuster implements ImageListener {
 		b.addActionListener(new ActionListener() {
 			@Override
 			public void actionPerformed(ActionEvent e) {
-				for(int i=0;i<gnsps.length;i++)gnsps[i].setValue(100);
+				for(int i=0;i<gnsps.length;i++)gnsps[i].setFloatValue(1f);
 				jic.setGamma(null);
 			}
 		});

@@ -9,6 +9,7 @@ import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 import java.awt.event.AdjustmentEvent;
 import java.awt.event.AdjustmentListener;
+import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
 import java.awt.event.MouseMotionListener;
 
@@ -20,6 +21,7 @@ public class JCRotator extends JCAdjuster implements MouseMotionListener {
 	NumberScrollPanel[] tnsps= new NumberScrollPanel[3];
 	NumberScrollPanel[] znsps= new NumberScrollPanel[2];
 	NumberScrollPanel zscp;
+	NumberScrollPanel rotMultPanel;
 	private boolean isRunning=false;
 
 	public JCRotator(JOGLImageCanvas jica) {
@@ -42,6 +44,13 @@ public class JCRotator extends JCAdjuster implements MouseMotionListener {
 		for(int i=0;i<rnsps.length;i++) {
 			c.gridy++;
 			rnsps[i]=new NumberScrollPanel(inits[i],0,360,cps[i],0);
+			final int ii=i;
+			rnsps[i].getIcon().addMouseListener(new MouseAdapter() {
+				public void mousePressed(MouseEvent e){
+					rnsps[ii].setValue(0);
+					update();
+				}
+			});
 			add(rnsps[i], c);
 			rnsps[i].addAdjustmentListener(al);
 			rnsps[i].setFocusable(false);
@@ -58,10 +67,35 @@ public class JCRotator extends JCAdjuster implements MouseMotionListener {
 		});
 		add(b,c);
 		c.gridy++;
+		add(new Label("Mouse drag rotation speed"),c);
+		c.gridy++;
+		rotMultPanel = new NumberScrollPanel(jic.rotmult, 0.5f, 5.0f, 'R', 1);
+		rotMultPanel.getIcon().addMouseListener(new MouseAdapter() {
+			public void mousePressed(MouseEvent e){
+				rotMultPanel.setFloatValue(1f);
+				jic.rotmult=1;
+			}
+		});
+		rotMultPanel.addAdjustmentListener(new AdjustmentListener() {
+			@Override
+			public void adjustmentValueChanged(AdjustmentEvent e) {
+				jic.rotmult=rotMultPanel.getFloatValue();
+			}
+		});
+		rotMultPanel.setFocusable(false);
+		add(rotMultPanel, c);
+		c.gridy++;
 		add(new Label("Translation"),c);
 		for(int i=0;i<tnsps.length;i++) {
 			c.gridy++;
 			tnsps[i]=new NumberScrollPanel(inits[i+3],-2.0f,2.0f,cps[i],2);
+			final int ii=i;
+			tnsps[i].getIcon().addMouseListener(new MouseAdapter() {
+				public void mousePressed(MouseEvent e){
+					tnsps[ii].setValue(0);
+					update();
+				}
+			});
 			add(tnsps[i], c);
 			tnsps[i].addAdjustmentListener(al);
 			tnsps[i].setFocusable(false);
@@ -88,6 +122,13 @@ public class JCRotator extends JCAdjuster implements MouseMotionListener {
 		for(int i=0;i<1;i++) {
 			c.gridy++;
 			zscp=new NumberScrollPanel(jic.getSuperMag(),-2.0f,2.0f,'M',2);
+			zscp.getIcon().addMouseListener(new MouseAdapter() {
+				public void mousePressed(MouseEvent e){
+					zscp.setFloatValue(0);
+					jic.setSuperMag(zscp.getFloatValue());
+					jic.repaint();
+				}
+			});
 			add(zscp, c);
 			zscp.addAdjustmentListener(al);
 			zscp.setFocusable(false);
@@ -116,6 +157,15 @@ public class JCRotator extends JCAdjuster implements MouseMotionListener {
 		for(int i=0;i<znsps.length;i++) {
 			c.gridy++;
 			znsps[i]=new NumberScrollPanel(i==0?jic.zNear:jic.zFar,JCP.zNear,JCP.zFar,i==0?'N':'F',2);
+			final int ii=i;
+			znsps[i].getIcon().addMouseListener(new MouseAdapter() {
+				public void mousePressed(MouseEvent e){
+					if(ii==0)znsps[ii].setFloatValue(JCP.zNear);
+					else znsps[ii].setFloatValue(JCP.zFar);
+					jic.setNearFar(new float[] {znsps[0].getFloatValue(),znsps[1].getFloatValue()});
+					jic.repaint();
+				}
+			});
 			add(znsps[i], c);
 			znsps[i].addAdjustmentListener(al);
 			znsps[i].setFocusable(false);

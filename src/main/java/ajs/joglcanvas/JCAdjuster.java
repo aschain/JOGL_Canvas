@@ -14,6 +14,7 @@ import java.awt.event.AdjustmentEvent;
 import java.awt.event.AdjustmentListener;
 import java.awt.event.FocusEvent;
 import java.awt.event.FocusListener;
+import java.awt.Canvas;
 
 import ij.ImagePlus;
 import ij.gui.ScrollbarWithLabel;
@@ -53,11 +54,15 @@ public abstract class JCAdjuster extends PlugInDialog implements AdjustmentListe
 		private char label;
 		private int exp;
 		private float div;
+		private java.awt.Canvas icon2;
 		
 		public NumberScrollPanel(float val, float min, float max, char label, int exp) {
 			super(null, (int)(val*Math.pow(10, exp)), 1, (int)(min*Math.pow(10, exp)), (int)(max*Math.pow(10, exp)), label);
 			Component[] comps=getComponents();
-			for(Component comp:comps)if(comp instanceof Scrollbar)sb=(Scrollbar)comp;
+			for(Component comp:comps){
+				if(comp instanceof Scrollbar)sb=(Scrollbar)comp;
+				if(icon2==null && comp instanceof Canvas)icon2=(Canvas)comp;
+			}
 			textfield=new TextField(String.format("%."+exp+"f",val),4);
 			textfield.addActionListener(this);
 			textfield.addFocusListener(new FocusListener() {
@@ -75,6 +80,10 @@ public abstract class JCAdjuster extends PlugInDialog implements AdjustmentListe
 		}
 		
 		public char getLabel() {return label;}
+
+		public Canvas getIcon() {
+			return icon2;
+		}
 		
 		public Dimension getPreferredSize() {
 			Dimension dim = super.getPreferredSize();

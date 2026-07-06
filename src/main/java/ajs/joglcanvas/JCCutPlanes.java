@@ -39,6 +39,19 @@ public class JCCutPlanes extends JCAdjuster {
 		for(int i=0;i<cps.length;i++) {
 			c.gridy++;
 			nsps[i]=new NumberScrollPanel(this.c[i],1,whd[(i>2)?(i-3):i]+1,cps[i],0);
+			final int ii=i;
+			nsps[i].getIcon().addMouseListener(new java.awt.event.MouseAdapter() {
+				public void mousePressed(java.awt.event.MouseEvent e){
+					Rectangle r=jic.getSrcRect();
+					if(ii==0)nsps[ii].setFloatValue(constrainToZoom?r.x:1);
+					else if(ii==1)nsps[ii].setFloatValue(constrainToZoom?r.y:1);
+					else if(ii==2)nsps[ii].setFloatValue(1);
+					else if(ii==3)nsps[ii].setFloatValue(constrainToZoom?r.x+r.width:whd[0]);
+					else if(ii==4)nsps[ii].setFloatValue(constrainToZoom?r.y+r.height:whd[1]);
+					else nsps[ii].setFloatValue(whd[2]);
+					update();
+				}
+			});
 			add(nsps[i], c);
 			nsps[i].addAdjustmentListener(this);
 			nsps[i].setFocusable(false);
