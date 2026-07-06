@@ -2192,8 +2192,8 @@ public class JOGLImageCanvas extends ImageCanvas implements GLEventListener, Ima
 			//if(JCP.debug) {IJ.log("\\Update2:   Drag took: "+String.format("%5.1f", (float)(System.nanoTime()-dragtime)/1000000f)+"ms"); dragtime=System.nanoTime();}
 			if(go3d){
 				if((e.getX()-osx)==0 && (e.getY()-osy)==0)return;
-				float xd=(float)(e.getX()-sx)/(float)srcRect.width;
-				float yd=(float)(e.getY()-sy)/(float)srcRect.height;
+				float xd=(float)(e.getX()-sx);
+				float yd=(float)(e.getY()-sy);
 				if(JCP.debug)log("Dragged "+e.getX()+"x "+e.getY()+"y  sx"+sx+" sy"+sy);
 				if(warpPointerWorks) {
 					//int wx=(int)(joglEventAdapter.getDejustedX(osx)*dpimag/surfaceScale+0.5), wy=(int)(joglEventAdapter.getDejustedY(osy)*dpimag/surfaceScale+0.5);
@@ -2203,24 +2203,24 @@ public class JOGLImageCanvas extends ImageCanvas implements GLEventListener, Ima
 				float rotx=0f, roty=0f, rotz=0f;
 				if(alt||e.getButton()==MouseEvent.BUTTON2) {
 					if(shift) {
-						tz-=yd;
+						tz-=yd/(float)srcRect.height;
 						imageState.setNextSrcRect=true;
 					}else{
 						//qrot.rotateByEuler(0f, 0f, (float)Math.toRadians(yd*90f));
-						rotz=-yd*(float)Math.PI*30f*rotmult;
+						rotz=-yd/30f*rotmult;
 					}
 				}else if(shift) {
 					if(ctrl) {
-						setSuperMag(supermag-yd*(float)magnification);
+						setSuperMag(supermag-yd/1000f*(float)magnification);
 					}else {
-						tx+=xd;
-						ty-=yd;
+						tx+=xd/(float)srcRect.width;
+						ty-=yd/(float)srcRect.height;
 						imageState.setNextSrcRect=true;
 					}
 				}else {
 					//qrot.rotateByEuler((float)Math.toRadians(yd*90f), (float)Math.toRadians(xd*90f), 0f);
-					rotx=yd*(float)Math.PI*30f*rotmult;
-					roty=xd*(float)Math.PI*30f*rotmult;
+					rotx=yd/30f*rotmult;
+					roty=xd/30f*rotmult;
 				}
 				if(rotx!=0f || roty!=0f || rotz!=0f) {
 					Quaternion qrot2=new Quaternion().setFromEuler((float)Math.toRadians(rotx), (float)Math.toRadians(roty), (float)Math.toRadians(rotz));
