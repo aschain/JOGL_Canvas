@@ -122,7 +122,8 @@ public class JCMirror extends Frame{
 				((java.awt.Graphics2D)g).setRenderingHint(java.awt.RenderingHints.KEY_TEXT_ANTIALIASING, java.awt.RenderingHints.VALUE_TEXT_ANTIALIAS_LCD_HRGB);
 				g.setColor(Color.WHITE);
 				g.fillRect(0,0, getWidth(), getHeight());
-				String line="RotX:"+Math.round(jic.dx)+"° RotY:"+Math.round(jic.dy)+"° RotZ:"+Math.round(jic.dz)+"°";
+				float[] eas=jic.getEulerAngles();
+				String line="RotX:"+Math.round(eas[0])+"° RotY:"+Math.round(eas[1])+"° RotZ:"+Math.round(eas[2])+"°";
 				if(jic.supermag!=0f || jic.getMagnification()!=1.0)line+=" Mag:"+String.format("%.2f", (float)jic.getMagnification()+jic.supermag)+"x";
 				if(jic.tx!=0f || jic.ty!=0f || jic.tz!=0f)line+=" Tx:"+String.format("%.1f", jic.tx)+" Ty:"+String.format("%.1f", jic.ty)+" Tz:"+String.format("%.1f", jic.tz);
 				g.setFont(new java.awt.Font("SansSerif", java.awt.Font.PLAIN, 12));
