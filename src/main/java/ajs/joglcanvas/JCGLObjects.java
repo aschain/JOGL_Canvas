@@ -272,7 +272,38 @@ public class JCGLObjects {
 	}
 	
 	public BufferedImage grabScreen(int x, int y, int width, int height) {
-		//boolean alpha=false, awtOrientation=true;
+		if(gl==null || gl23==null) return null;
+		gl23.glBindFramebuffer(GL_FRAMEBUFFER, 0);
+		gl23.glBindRenderbuffer(GL_RENDERBUFFER, 0);
+		gl.glFinish();
+		
+		if(IJ.isMacintosh()) {
+			ByteBuffer pixels=GLBuffers.newDirectByteBuffer(width*height*4);
+			int[] readTargets={GL_BACK, GL_FRONT};
+			for(int rt:readTargets) {
+				gl23.glReadBuffer(rt);
+				gl23.glReadPixels(x, y, width, height, GL_RGBA, GL_UNSIGNED_BYTE, pixels);
+				if(gl23.glGetError()==GL_NO_ERROR) {
+					BufferedImage image=new BufferedImage(width, height, BufferedImage.TYPE_INT_ARGB);
+					for(int row=0;row<height;row++) {
+						int[] rgba=new int[width];
+						for(int col=0;col<width;col++) {
+							int off=((height-1-row)*width+col)*4;
+							int r=pixels.get(off)&0xff;
+							int g=pixels.get(off+1)&0xff;
+							int b=pixels.get(off+2)&0xff;
+							int a=pixels.get(off+3)&0xff;
+							rgba[col]=(a<<24)|(r<<16)|(g<<8)|b;
+						}
+						image.setRGB(0, row, width, 1, rgba, 0, width);
+					}
+					return image;
+				}
+				pixels.clear();
+			}
+			JCP.log("grabScreen: could not read pixels from back or front buffer, using AWTGLReadBufferUtil");
+		}
+		
 		if(ss==null) ss=new AWTGLReadBufferUtil(gl.getGLProfile(), false);
 		return ss.readPixelsToBufferedImage(gl, x, y, width, height, true);
 	}
