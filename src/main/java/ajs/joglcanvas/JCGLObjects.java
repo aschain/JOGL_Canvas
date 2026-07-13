@@ -1,6 +1,7 @@
 package ajs.joglcanvas;
 
 import static com.jogamp.opengl.GL.GL_ARRAY_BUFFER;
+import static com.jogamp.opengl.GL.GL_BACK;
 import static com.jogamp.opengl.GL.GL_BLEND;
 import static com.jogamp.opengl.GL.GL_COLOR_ATTACHMENT0;
 import static com.jogamp.opengl.GL.GL_COLOR_BUFFER_BIT;
@@ -9,6 +10,7 @@ import static com.jogamp.opengl.GL.GL_DEPTH_BUFFER_BIT;
 import static com.jogamp.opengl.GL.GL_DST_COLOR;
 import static com.jogamp.opengl.GL.GL_DYNAMIC_DRAW;
 import static com.jogamp.opengl.GL.GL_ELEMENT_ARRAY_BUFFER;
+import static com.jogamp.opengl.GL.GL_FALSE;
 import static com.jogamp.opengl.GL.GL_FLOAT;
 import static com.jogamp.opengl.GL.GL_FRAMEBUFFER;
 import static com.jogamp.opengl.GL.GL_FRAMEBUFFER_COMPLETE;
@@ -64,6 +66,7 @@ import static com.jogamp.opengl.GL2ES3.GL_COLOR;
 import static com.jogamp.opengl.GL2ES3.GL_DEPTH;
 import static com.jogamp.opengl.GL2ES3.GL_MAX;
 import static com.jogamp.opengl.GL2ES3.GL_PIXEL_UNPACK_BUFFER;
+import static com.jogamp.opengl.GL2ES3.GL_PROGRAM_BINARY_RETRIEVABLE_HINT;
 import static com.jogamp.opengl.GL2ES3.GL_TEXTURE_BASE_LEVEL;
 import static com.jogamp.opengl.GL2ES3.GL_TEXTURE_MAX_LEVEL;
 import static com.jogamp.opengl.GL2ES3.GL_UNIFORM_BUFFER;
@@ -210,6 +213,15 @@ public class JCGLObjects {
 	}
 	
 	public void glDrawBuffer(int glint) {
+		// macOS can reject explicit back-buffer selection for the default framebuffer
+		// even though the render target is otherwise valid. In this code path we
+		// simply ensure the default framebuffer is active and skip the call entirely.
+		gl23.glBindFramebuffer(GL_FRAMEBUFFER, 0);
+		gl23.glBindRenderbuffer(GL_RENDERBUFFER, 0);
+		//|| glint == GL2GL3.GL_BACK_LEFT || glint == GL2GL3.GL_BACK_RIGHT
+		if (IJ.isMacintosh() && (glint == GL_BACK )) {
+			return;
+		}
 		gl23.glDrawBuffer(glint);
 	}
 

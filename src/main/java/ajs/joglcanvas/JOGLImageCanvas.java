@@ -187,6 +187,7 @@ public class JOGLImageCanvas extends ImageCanvas implements GLEventListener, Ima
 			log("Error in GL Capabilities, using default");
 			glc=new GLCapabilities(GLProfile.getDefault());
 		}
+		glc.setDoubleBuffered(true);
 		int bits=imp.getBitDepth();
 		if((bits<16 || bits==24)&& (glc.getRedBits()>8 || glc.getGreenBits()>8 || glc.getBlueBits()>8) ) {
 			log("JOGLCanvas Deep Color Warning:\nOriginal image is 8 bits or less and therefore \nwon't display any differently with HDR 10 bits or higher display.");
@@ -412,7 +413,7 @@ public class JOGLImageCanvas extends ImageCanvas implements GLEventListener, Ima
 			warpPointerWorks=true;
 			if(JCP.debug)log("warp working");
 		}
-		log("  Acc: "+glw.getChosenGLCapabilities());
+		log("  Acc: "+drawable.getChosenGLCapabilities());
 	}
 	
 	private void init3dTex() {
@@ -1034,8 +1035,8 @@ public class JOGLImageCanvas extends ImageCanvas implements GLEventListener, Ima
 					glos.setAnaglyphColor(JCP.anaColors[stereoi], JCP.dubois);
 				}else {
 					if(stereoType==StereoType.QUADBUFFER) {
-						if(stereoi==0)glos.getGL2GL3().glDrawBuffer(GL2GL3.GL_BACK_LEFT);
-						else glos.getGL2GL3().glDrawBuffer(GL2GL3.GL_BACK_RIGHT);
+						if(stereoi==0)glos.glDrawBuffer(GL2GL3.GL_BACK_LEFT);
+						else glos.glDrawBuffer(GL2GL3.GL_BACK_RIGHT);
 						glos.clearColorDepth();
 					}
 					if(stereoType==StereoType.CARDBOARD) {
