@@ -59,7 +59,8 @@ public class JCMirror extends Frame{
 		setLayout(new JCLayout());
 		setBackground(Color.WHITE);
 		setVisible(true);
-		setMirrorSizeForCanvas(jic.getWidth(), jic.getHeight());
+		java.awt.Insets ins=getInsets();
+        setSize(jic.getWidth()+ins.left+ins.right+ImageWindow.HGAP*2,jic.getHeight()+ins.top+ins.bottom+ImageWindow.VGAP*2+11);
 		add(jic.icc);
 		doLayout();
 		validate();

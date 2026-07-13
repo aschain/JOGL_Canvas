@@ -64,9 +64,13 @@ import static com.jogamp.opengl.GL2ES2.GL_TEXTURE_WRAP_R;
 import static com.jogamp.opengl.GL2ES2.GL_VERTEX_SHADER;
 import static com.jogamp.opengl.GL2ES3.GL_COLOR;
 import static com.jogamp.opengl.GL2ES3.GL_DEPTH;
+import static com.jogamp.opengl.GL2ES3.GL_DRAW_FRAMEBUFFER;
 import static com.jogamp.opengl.GL2ES3.GL_MAX;
 import static com.jogamp.opengl.GL2ES3.GL_PIXEL_UNPACK_BUFFER;
 import static com.jogamp.opengl.GL2ES3.GL_PROGRAM_BINARY_RETRIEVABLE_HINT;
+import static com.jogamp.opengl.GL2ES3.GL_READ_FRAMEBUFFER;
+import static com.jogamp.opengl.GL2ES3.GL_SAMPLE_BUFFERS;
+import static com.jogamp.opengl.GL2ES3.GL_SAMPLES;
 import static com.jogamp.opengl.GL2ES3.GL_TEXTURE_BASE_LEVEL;
 import static com.jogamp.opengl.GL2ES3.GL_TEXTURE_MAX_LEVEL;
 import static com.jogamp.opengl.GL2ES3.GL_UNIFORM_BUFFER;
@@ -278,30 +282,54 @@ public class JCGLObjects {
 		gl.glFinish();
 		
 		if(IJ.isMacintosh()) {
+			int[] sampleBuffers=new int[1];
+			int[] samples=new int[1];
+			gl23.glGetIntegerv(GL_SAMPLE_BUFFERS, sampleBuffers, 0);
+			gl23.glGetIntegerv(GL_SAMPLES, samples, 0);
+			
 			ByteBuffer pixels=GLBuffers.newDirectByteBuffer(width*height*4);
-			int[] readTargets={GL_BACK, GL_FRONT};
-			for(int rt:readTargets) {
-				gl23.glReadBuffer(rt);
-				gl23.glReadPixels(x, y, width, height, GL_RGBA, GL_UNSIGNED_BYTE, pixels);
-				if(gl23.glGetError()==GL_NO_ERROR) {
-					BufferedImage image=new BufferedImage(width, height, BufferedImage.TYPE_INT_ARGB);
-					for(int row=0;row<height;row++) {
-						int[] rgba=new int[width];
-						for(int col=0;col<width;col++) {
-							int off=((height-1-row)*width+col)*4;
-							int r=pixels.get(off)&0xff;
-							int g=pixels.get(off+1)&0xff;
-							int b=pixels.get(off+2)&0xff;
-							int a=pixels.get(off+3)&0xff;
-							rgba[col]=(a<<24)|(r<<16)|(g<<8)|b;
-						}
-						image.setRGB(0, row, width, 1, rgba, 0, width);
-					}
-					return image;
+			if(sampleBuffers[0] > 0 || samples[0] > 1) {
+				int[] fbo=new int[1];
+				int[] tex=new int[1];
+				gl.glGenFramebuffers(1, fbo, 0);
+				gl.glGenTextures(1, tex, 0);
+				gl.glBindTexture(GL_TEXTURE_2D, tex[0]);
+				gl23.glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA8, width, height, 0, GL_RGBA, GL_UNSIGNED_BYTE, null);
+				gl23.glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+				gl23.glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+				gl23.glBindFramebuffer(GL_FRAMEBUFFER, fbo[0]);
+				gl23.glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, tex[0], 0);
+				if(gl23.glCheckFramebufferStatus(GL_FRAMEBUFFER) == GL_FRAMEBUFFER_COMPLETE) {
+					gl23.glBindFramebuffer(GL_READ_FRAMEBUFFER, 0);
+					gl23.glBindFramebuffer(GL_DRAW_FRAMEBUFFER, fbo[0]);
+					gl23.glBlitFramebuffer(0, 0, width, height, 0, 0, width, height, GL_COLOR_BUFFER_BIT, GL_NEAREST);
+					gl23.glBindFramebuffer(GL_FRAMEBUFFER, fbo[0]);
+					gl23.glReadPixels(x, y, width, height, GL_RGBA, GL_UNSIGNED_BYTE, pixels);
 				}
-				pixels.clear();
+				gl23.glBindFramebuffer(GL_FRAMEBUFFER, 0);
+				gl.glDeleteTextures(1, tex, 0);
+				gl.glDeleteFramebuffers(1, fbo, 0);
 			}
-			JCP.log("grabScreen: could not read pixels from back or front buffer, using AWTGLReadBufferUtil");
+			else {
+				gl23.glReadPixels(x, y, width, height, GL_RGBA, GL_UNSIGNED_BYTE, pixels);
+			}
+			if(gl23.glGetError()==GL_NO_ERROR) {
+				BufferedImage image=new BufferedImage(width, height, BufferedImage.TYPE_INT_ARGB);
+				for(int row=0;row<height;row++) {
+					int[] rgba=new int[width];
+					for(int col=0;col<width;col++) {
+						int off=((height-1-row)*width+col)*4;
+						int r=pixels.get(off)&0xff;
+						int g=pixels.get(off+1)&0xff;
+						int b=pixels.get(off+2)&0xff;
+						int a=pixels.get(off+3)&0xff;
+						rgba[col]=(a<<24)|(r<<16)|(g<<8)|b;
+					}
+					image.setRGB(0, row, width, 1, rgba, 0, width);
+				}
+				return image;
+			}
+			JCP.log("grabScreen: could not read pixels from the active framebuffer, using AWTGLReadBufferUtil");
 		}
 		
 		if(ss==null) ss=new AWTGLReadBufferUtil(gl.getGLProfile(), false);
