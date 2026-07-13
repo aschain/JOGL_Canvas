@@ -9,6 +9,7 @@ import static com.jogamp.opengl.GL.GL_DEPTH_BUFFER_BIT;
 import static com.jogamp.opengl.GL.GL_DST_COLOR;
 import static com.jogamp.opengl.GL.GL_DYNAMIC_DRAW;
 import static com.jogamp.opengl.GL.GL_ELEMENT_ARRAY_BUFFER;
+import static com.jogamp.opengl.GL.GL_FALSE;
 import static com.jogamp.opengl.GL.GL_FLOAT;
 import static com.jogamp.opengl.GL.GL_FRAMEBUFFER;
 import static com.jogamp.opengl.GL.GL_FRAMEBUFFER_COMPLETE;
@@ -64,6 +65,7 @@ import static com.jogamp.opengl.GL2ES3.GL_COLOR;
 import static com.jogamp.opengl.GL2ES3.GL_DEPTH;
 import static com.jogamp.opengl.GL2ES3.GL_MAX;
 import static com.jogamp.opengl.GL2ES3.GL_PIXEL_UNPACK_BUFFER;
+import static com.jogamp.opengl.GL2ES3.GL_PROGRAM_BINARY_RETRIEVABLE_HINT;
 import static com.jogamp.opengl.GL2ES3.GL_TEXTURE_BASE_LEVEL;
 import static com.jogamp.opengl.GL2ES3.GL_TEXTURE_MAX_LEVEL;
 import static com.jogamp.opengl.GL2ES3.GL_UNIFORM_BUFFER;
@@ -261,6 +263,11 @@ public class JCGLObjects {
 	
 	public BufferedImage grabScreen(int x, int y, int width, int height) {
 		//boolean alpha=false, awtOrientation=true;
+		int status = gl.glCheckFramebufferStatus(GL.GL_FRAMEBUFFER);
+		if (status != GL.GL_FRAMEBUFFER_COMPLETE) {
+			System.err.println("FBO is incomplete, error: " + status);
+			gl.glBindFramebuffer(GL_FRAMEBUFFER, 0);
+		}
 		if(ss==null) ss=new AWTGLReadBufferUtil(gl.getGLProfile(), false);
 		return ss.readPixelsToBufferedImage(gl, x, y, width, height, true);
 	}

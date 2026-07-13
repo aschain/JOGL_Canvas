@@ -59,7 +59,7 @@ public class JCRecorder implements PlugIn, BIScreenGrabber {
 	
 	public void screenUpdated(BufferedImage image) {
 		currImage=image;
-		updated=true;
+		if(image!=null)updated=true;
 	}
 
 	public boolean isReadyForUpdate() {
@@ -94,8 +94,13 @@ public class JCRecorder implements PlugIn, BIScreenGrabber {
 
 		        while ((waitTime<(60L*1000000000L)) && !stop) {
 		        	if(updated) {
-			        	currImage = convertToType(currImage, BufferedImage.TYPE_3BYTE_BGR);
-			        	elapsedTime=System.nanoTime();
+						currImage = convertToType(currImage, BufferedImage.TYPE_3BYTE_BGR);
+						if (currImage == null) {
+							IJ.log("JCRecorder: captured image was null, skipping frame");
+							updated = false;
+							continue;
+						}
+						elapsedTime=System.nanoTime();
 			        	mystatus="Frame: "+(fn++)+" Time: "+(((float)elapsedTime-(float)startTime)/1000000000f)+"s";
 			        	recbox.setStatus(mystatus);
 						ColorProcessor ip=new ColorProcessor(currImage);
@@ -116,11 +121,15 @@ public class JCRecorder implements PlugIn, BIScreenGrabber {
 		        		// ignore
 		        	}
 		        }
-
-        		(new ImagePlus(title,newimgst)).show();
+				if(newimgst==null) {
+					IJ.log("JCRecorder: no frames captured, movie not created");
+		        	recbox.setStatus(mystatus+"\nMovie not created, no frames captured");
+				}else {
+					(new ImagePlus(title,newimgst)).show();
+		        	recbox.setStatus(mystatus+"\nCompleted movie");
+				}
 		        saving.set(false);
 		        stop=false;
-		        recbox.setStatus(mystatus+"\nCompleted movie");
 				recbox.setStopEnabled(false);
 				recbox.setStartEnabled(true);
 			}
@@ -210,8 +219,13 @@ public class JCRecorder implements PlugIn, BIScreenGrabber {
 					        if(waitTime>(60L*1000000000L))stop=true;
 				        }while (!stop && !updated);
 			        	if(updated) {
-				        	currImage = convertToType(currImage, BufferedImage.TYPE_3BYTE_BGR);
-				        	mystatus="Frame: "+(fn++)+" Time: "+(((float)elapsedTime-(float)startTime)/1000000000f)+"s";
+							currImage = convertToType(currImage, BufferedImage.TYPE_3BYTE_BGR);
+							if (currImage == null) {
+								IJ.log("JCRecorder: captured image was null during genStack, skipping slice");
+								updated = false;
+								continue;
+							}
+							mystatus="Frame: "+(fn++)+" Time: "+(((float)elapsedTime-(float)startTime)/1000000000f)+"s";
 				        	recbox.setStatus(mystatus);
 				        	ImagePlus adderimg=new ImagePlus("add image",currImage);
 				        	if(start) {
@@ -246,9 +260,14 @@ public class JCRecorder implements PlugIn, BIScreenGrabber {
 	public static BufferedImage convertToType(BufferedImage sourceImage,
             int targetType) {
         BufferedImage image;
-        // if the source image is already the target type, return the source
-        // image
-        if (sourceImage.getType() == targetType) {
+		// guard against null source images (e.g., failed readPixels)
+		if (sourceImage == null) {
+			IJ.log("JCRecorder: sourceImage is null in convertToType");
+			return null;
+		}
+		// if the source image is already the target type, return the source
+		// image
+		if (sourceImage.getType() == targetType) {
             image = sourceImage;
         }
         // otherwise create a new image of the target type and draw the new

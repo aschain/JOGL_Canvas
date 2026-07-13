@@ -54,6 +54,7 @@ import com.jogamp.common.nio.Buffers;
 import com.jogamp.newt.Display;
 import com.jogamp.newt.NewtFactory;
 import com.jogamp.newt.Screen;
+import com.jogamp.opengl.GL;
 import com.jogamp.opengl.GL2GL3;
 import com.jogamp.opengl.GLAutoDrawable;
 import com.jogamp.opengl.GLCapabilities;
@@ -1005,7 +1006,7 @@ public class JOGLImageCanvas extends ImageCanvas implements GLEventListener, Ima
 		if(screengrabber!=null) {
 			if(screengrabber.isReadyForUpdate()) {
 				BufferedImage bi=grabScreen(drawable);
-				screengrabber.screenUpdated(bi);
+				if(bi!=null)screengrabber.screenUpdated(bi);
 			}
 		}
 		if(isMirror && go3d && mirror!=null)mirror.draw3DMirrorInfo();
@@ -1251,6 +1252,11 @@ public class JOGLImageCanvas extends ImageCanvas implements GLEventListener, Ima
 		if(stereoType==StereoType.CARDBOARD) {
 			y=(int)((1f-(1f/CB_MAXSIZE))*(float)srcRect.height/(float)srcRect.width/2f*(float)height);
 			height/=CB_MAXSIZE;
+		}
+		glos.setGL(drawable.getGL());
+		int err=drawable.getGL().glGetError();
+		if (err != GL.GL_NO_ERROR) {
+			System.err.println("Pre-screenshot cleanup. Actual error: 0x" + Integer.toHexString(err));
 		}
 		return glos.grabScreen(x, y, width, height);
 	}
