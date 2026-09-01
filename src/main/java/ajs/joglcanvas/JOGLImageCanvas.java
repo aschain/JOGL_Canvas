@@ -2246,8 +2246,10 @@ public class JOGLImageCanvas extends ImageCanvas implements GLEventListener, Ima
 			//if(JCP.drawCrosshairs>0) {
 			//int wx=(int)(joglEventAdapter.getDejustedX(osx)*dpimag/surfaceScale+0.5), wy=(int)(joglEventAdapter.getDejustedY(osy)*dpimag/surfaceScale+0.5);
 			int wx=(int)(joglEventAdapter.getDejustedX(osx)), wy=(int)(joglEventAdapter.getDejustedY(osy));
-			glw.warpPointer(wx, wy);
-			if(JCP.debug)log("Pointer warped "+joglEventAdapter.getDejustedX(osx)+" "+joglEventAdapter.getDejustedY(osy));
+			if(warpPointerWorks) {
+				glw.warpPointer(wx, wy);
+				if(JCP.debug)log("Pointer warped "+joglEventAdapter.getDejustedX(osx)+" "+joglEventAdapter.getDejustedY(osy));
+			}
 			//}
 		}else {
 			super.mouseReleased(e);

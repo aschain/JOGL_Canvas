@@ -34,7 +34,7 @@ public class JCMirror extends Frame{
         this.imp=imp;
 		addWindowListener(new WindowAdapter() {
 			public void windowClosing(WindowEvent e) {
-                if(JCP.debug) JOGLImageCanvas.log("revertting");
+                if(JCP.debug) JOGLImageCanvas.log("reverting");
                 jic.revert(); 
             }
 		});

@@ -70,7 +70,7 @@ public class JCP implements PlugIn {
 	public static String glProfileName=Prefs.get("ajs.joglcanvas.glProfileName", "");
 	public static int undersample=(int)Prefs.get("ajs.joglcanvas.undersample", 1.0);
 	public static String renderFunction=Prefs.get("ajs.joglcanvas.renderFunction", "MAX");
-	public static boolean openglroi=Prefs.get("ajs.joglcanvas.openglroi", false);
+	public static boolean openglroi=Prefs.get("ajs.joglcanvas.openglroi", true);
 	public static Color leftAnaglyphColor=new Color((int) Prefs.get("ajs.joglcanvas.leftAnaglyphColor",Color.RED.getRGB()));
 	public static Color rightAnaglyphColor=new Color((int) Prefs.get("ajs.joglcanvas.rightAnaglyphColor",Color.CYAN.getRGB()));
 	public static boolean dubois=Prefs.get("ajs.joglcanvas.dubois", false);
@@ -507,7 +507,7 @@ public class JCP implements PlugIn {
 		gd.addCheckbox("Enable active stereo (quadbuffer w/ shutter glasses)", preferStereo);
 		gd.addCheckbox("Open 10-bit test image", false);
 		gd.addMessage("Advanced Settings:");
-		gd.addCheckbox("Draw ROI with OpenGL (in progress)", openglroi);
+		gd.addCheckbox("Draw ROI with OpenGL (set to false if ROIs are not displaying correctly)", openglroi);
 		String[] cursorChoices=new String[] {"Off", "Short", "Long"};
 		gd.addChoice("Draw cursor crosshairs (requires GL ROI)", cursorChoices, cursorChoices[drawCrosshairs]);
 		gd.addCheckbox("Fix if mouse wheel is not working for converted canvas", mouseWheelFix);
