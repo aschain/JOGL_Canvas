@@ -1087,7 +1087,8 @@ public class JOGLImageCanvas extends ImageCanvas implements GLEventListener, Ima
 			if(isPoint) {
 				for(int i=0;i<roi.getPolygon().npoints;i++) {
 					int ppos=((PointRoi)roi).getPointPosition(i);
-					int pfrm=ppos/(sls*imp.getNChannels()), pfrmRem=pfrm%(sls*chs), psl=pfrmRem/chs, pch=pfrmRem%chs;
+					roi.getCPosition(); roi.getZPosition(); roi.getTPosition();
+					int pfrm=ppos/(sls*chs), pfrmRem=ppos%(sls*chs), psl=pfrmRem/chs, pch=pfrmRem%chs;
 					if(ppos==0 || (pfrm==(imp.getT()-1) && pch==(imp.getC()-1))) {
 						doOv[psl]=true;
 					}
@@ -1443,6 +1444,7 @@ public class JOGLImageCanvas extends ImageCanvas implements GLEventListener, Ima
 		glw.destroy();
 		if(mirror!=null)mirror.dispose();
 		mirror=null;
+		ImagePlus.removeImageListener(this);
 	}
 	
 	public void revert() {
@@ -1457,6 +1459,7 @@ public class JOGLImageCanvas extends ImageCanvas implements GLEventListener, Ima
 			jccpDialog=null;
 			jcgDialog=null;
 			jcrDialog=null;
+			ImagePlus.removeImageListener(this);
 		}
 		if(!isMirror) {
 			glw.destroy();
@@ -1955,7 +1958,7 @@ public class JOGLImageCanvas extends ImageCanvas implements GLEventListener, Ima
 	 */
 	public void imageOpened(ImagePlus imp) {}
 
-	public void imageClosed(ImagePlus imp) {}
+	public void imageClosed(ImagePlus imp) {ImagePlus.removeImageListener(this);}
 
 	public void imageUpdated(ImagePlus uimp) {
 		if(imp.equals(uimp)) {

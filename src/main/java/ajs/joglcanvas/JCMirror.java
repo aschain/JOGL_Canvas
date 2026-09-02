@@ -113,13 +113,14 @@ public class JCMirror extends Frame{
     }
 
     public void draw3DMirrorInfo(){
-		if(!isVisible() || jic.glw.isFullscreen() || mirrorPainting.get())return;
-		Graphics g=getGraphics();
-		if(g==null)return;
-		mirrorPainting.set(true);
+		if(!isVisible() || jic.glw.isFullscreen())return;
+		final Frame mirror=this;
 		java.awt.EventQueue.invokeLater(new Runnable() {
 			@Override
 			public void run() {
+				if(!mirrorPainting.compareAndSet(false, true))return;
+				Graphics g=mirror.getGraphics();
+				if(g==null)return;
 				((java.awt.Graphics2D)g).setRenderingHint(java.awt.RenderingHints.KEY_TEXT_ANTIALIASING, java.awt.RenderingHints.VALUE_TEXT_ANTIALIAS_LCD_HRGB);
 				g.setColor(Color.WHITE);
 				g.fillRect(0,0, getWidth(), getHeight());
