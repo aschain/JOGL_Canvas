@@ -49,7 +49,6 @@ import static com.jogamp.opengl.GL.GL_UNSIGNED_INT;
 import static com.jogamp.opengl.GL.GL_UNSIGNED_SHORT;
 import static com.jogamp.opengl.GL.GL_VERSION;
 import static com.jogamp.opengl.GL.GL_VIEWPORT;
-import static com.jogamp.opengl.GL2.*;
 import static com.jogamp.opengl.GL2ES2.GL_CLAMP_TO_BORDER;
 import static com.jogamp.opengl.GL2ES2.GL_CURRENT_PROGRAM;
 import static com.jogamp.opengl.GL2ES2.GL_DEPTH_COMPONENT;
