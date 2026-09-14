@@ -86,18 +86,16 @@ public class JOGLImageCanvas extends ImageCanvas implements GLEventListener, Ima
 	final private StackBuffer sb;
 	final protected boolean isMirror;
 	private JCGLObjects glos;
-	protected boolean disablePopupMenu, myImageUpdated=true, go3d=JCP.go3d;
+	protected boolean disablePopupMenu, myImageUpdated=true, imageListenerUpdated=false, go3d=JCP.go3d;
 	protected double dpimag=1.0;
 	protected float surfaceScale=1.0f;
 	private boolean deletePBOs=false, mirrorMagUnlock=false, mouseDragged=false;
 	public JCMirror mirror=null;
-	private ImageState imageState;
+	private final ImageRenderState imageState;
 	private boolean[] ltr=null, frame3ddrawn=null;
 
 	public String renderFunction=JCP.renderFunction;
 	protected int sx,sy, osx, osy;
-	protected float tx=0f, ty=0f, tz=0f, supermag=0f, zNear=JCP.zNear, zFar=JCP.zFar;
-	private float[] gamma=null;
 	
 	protected PopupMenu dcpopup=null;
 	private MenuItem mi3d=null;
@@ -153,7 +151,6 @@ public class JOGLImageCanvas extends ImageCanvas implements GLEventListener, Ima
 	public float fov=45f;
 	public float frustumZshift;
 	public float zmax=1f;
-	private Quaternion qrot=new Quaternion().setIdentity();
 	public float rotmult=1f;
 	public GLContext context;
 	public Point2D.Double oicp=null;
@@ -169,8 +166,7 @@ public class JOGLImageCanvas extends ImageCanvas implements GLEventListener, Ima
 		isFrameStack=imp.getNSlices()==1 && imp.getNFrames()>1;
 		if(imp.getNSlices()==1)go3d=false;
 		this.isMirror=isMirror;
-		imageState=new ImageState(imp, this);
-		imageState.prevSrcRect=new Rectangle(0,0,0,0);
+		imageState=new ImageRenderState();
 		Calibration cal=imp.getCalibration();
 		imageWidth=imp.getWidth();
 		imageHeight=imp.getHeight();
@@ -527,6 +523,8 @@ public class JOGLImageCanvas extends ImageCanvas implements GLEventListener, Ima
 		if(ratio>1.0f) sx=(float)(1.0/ratio);  else sy=(float)ratio;
 		//float znear=zNear, zfar=zFar;
 		//if(one3Dslice) {znear=-2/(float)imageWidth; zfar=-znear;}
+		float[] zNearFar=imageState.getZNearFar();
+		float zNear=zNearFar[0], zFar=zNearFar[1];
 		float[] viewmatrix=(new Matrix4f()).setToOrtho(-1f/sx, 1f/sx, -1f/sy, 1f/sy, zNear/sx, zFar/sx).get(new float[16]);
 		
 		//clear "projection" matrix
@@ -601,36 +599,45 @@ public class JOGLImageCanvas extends ImageCanvas implements GLEventListener, Ima
 
 	@Override
 	public void display(GLAutoDrawable drawable) {
+		// Make sure imp is still there, no other display is happening, and that the imp is not locked by another thread.
+		// And start timer
 		if(imp==null) {revert(); return;}
 		if(imp.isLocked()) {if(JCP.debug)log("imp.lock "+System.currentTimeMillis());return;}
 		//imp.lockSilently(); //causing z scrollbar to lose focus?
-		if(getPaintPending()) {if(JCP.debug)log("mylock "+System.currentTimeMillis());return;};
+		if(getPaintPending()) {if(JCP.debug)log("ic.paintpending "+System.currentTimeMillis());return;};
 		setPaintPending(true);
 		long displaytime = 0;
 		if(JCP.debug && verbose) {
 			displaytime=System.nanoTime();
 		}
+
+		//Initial variables
 		int sl=imp.getZ()-1, fr=imp.getT()-1, cfr=isFrameStack?0:fr, chs=imp.getNChannels(),sls=imp.getNSlices(),frms=imp.getNFrames();
 		int bitDepth=imp.getBitDepth();
 		Calibration cal=imp.getCalibration();
 		int srcRectWidthMag = (int)(srcRect.width*magnification+0.5);
 		int srcRectHeightMag = (int)(srcRect.height*magnification+0.5);
 		if(go3d&&sls==1)go3d=false;
-		imageState.check(qrot);
+
+		//Get image Render state and comapare to previous state to see if we need to update the viewport or redraw
+		imageState.check(srcRect, magnification, imp.getLuts(), imp.getCalibration(), imp.getC(), imp.getZ(), imp.getT());
+		float[] gamma=imageState.gammaForRendering();
 		boolean needDraw=false;
-		if(imageState.isChanged.srcRect) {
+		boolean needVerticies=false;
+
+		//If needed, set up global matrix
+		if(imageState.shouldUpdateGlobalMatrix() || (go3d && stereoUpdated)) {
 			resetGlobalMatrices(drawable);
+			needVerticies=true;
 			if(jccpDialog!=null && jccpDialog.constrainToZoom)jccpDialog.constrainToZoom(false);
+			if(stereoUpdated) {
+				if(JCP.debug)log("stereoUpdate viewport");
+				needDraw=true;
+				stereoUpdated=false;
+			}
 		}
 		
 		glos.setGL(drawable);
-		
-		if(go3d && stereoUpdated) {
-			if(JCP.debug)log("stereoUpdate reshape");
-			resetGlobalMatrices(drawable);
-			stereoUpdated=false;
-			needDraw=true;
-		}
 		
 		//initiate 2d or 3d texture
 		if(threeDupdated || deletePBOs) {
@@ -643,9 +650,9 @@ public class JOGLImageCanvas extends ImageCanvas implements GLEventListener, Ima
 				glos.getUniformBuffer("model").loadIdentity();
 				glos.getTexture("image2d").initiate(bitDepth, imageWidth, imageHeight, 1, 1);
 			}
-			imageState.isChanged.srcRect=true;
 			threeDupdated=false;
 			needDraw=true;
+			needVerticies=true;
 		}
 		
 		//make sure image PBO is set up
@@ -665,7 +672,10 @@ public class JOGLImageCanvas extends ImageCanvas implements GLEventListener, Ima
 		//Update Image PBO and texture if init or image changed----
 		
 		//log("miu:"+myImageUpdated+" sb.r:"+(myImageUpdated&& !imageState.isChanged.czt && !imageState.isChanged.minmax && !scbrAdjusting)+" "+imageState);
-		if(myImageUpdated && !imageState.isChanged.czt && !imageState.isChanged.minmax && !scbrAdjusting.get() && !((ij.gui.StackWindow)imp.getWindow()).getAnimate()) {
+		if(!myImageUpdated && imageListenerUpdated){
+			myImageUpdated=!imageState.isChanged.czt && !imageState.isChanged.minmax && !scbrAdjusting.get() && !((ij.gui.StackWindow)imp.getWindow()).getAnimate();
+		}
+		if(myImageUpdated) {
 			sb.resetSlices();
 			needDraw=true;
 			if(JCP.debug)log("myImageUpdated, no czt, minmax, scbrAdjust");
@@ -698,9 +708,10 @@ public class JOGLImageCanvas extends ImageCanvas implements GLEventListener, Ima
 				}
 			}
 		}
-		if(imageState.isChanged.minmax || imageState.isChanged.srcRect || imageState.isChanged.rotation|| cutPlanes.changed) needDraw=true;
+		if(imageState.shouldRedraw() || cutPlanes.changed) needDraw=true;
 		if(needDraw)frame3ddrawn=new boolean[frms];
 		myImageUpdated=false;
+		imageListenerUpdated=false;
 		
 		//setluts and threshold
 		ByteBuffer lutMatrixPointer=glos.getDirectBuffer(GL2GL3.GL_UNIFORM_BUFFER, "luts");
@@ -759,9 +770,12 @@ public class JOGLImageCanvas extends ImageCanvas implements GLEventListener, Ima
 		}
 		((Buffer)lutMatrixPointer).rewind();
 		
-		if( (imageState.isChanged.srcRect) || go3d) {
+		if( needVerticies || go3d) {
 			if(JCP.debug && imageState.isChanged.srcRect)log("Dsp- imageState.isChanged.srcRect");
 			//Set up model matrix
+			float supermag=imageState.getSupermag();
+			float[] translation=imageState.getTranslation();
+			float tx=translation[0], ty=translation[1], tz=translation[2];
 			if((supermag+magnification)<=0)supermag=0f-(float)magnification;
 			if((supermag+magnification)>24)supermag=24f-(float)magnification;
 			float 	trX=-((float)(srcRect.x*2+srcRect.width)/imageWidth-1f),
@@ -780,8 +794,8 @@ public class JOGLImageCanvas extends ImageCanvas implements GLEventListener, Ima
 			//Rotation-Translation-Scale Model Matrix
 			//and order of drawing slices depending on rotation
 			if(go3d) {
-				//Set up matricies
-				rotate=qrot.toMatrix(new float[16]);
+				//Set up model matrix
+				rotate=imageState.rotation().toMatrix(new float[16]);
 				//log("\\Update0:X x"+Math.round(100.0*matrix[0])/100.0+" y"+Math.round(100.0*matrix[1])/100.0+" z"+Math.round(100.0*matrix[2])/100.0);
 				//log("\\Update1:Y x"+Math.round(100.0*matrix[4])/100.0+" y"+Math.round(100.0*matrix[5])/100.0+" z"+Math.round(100.0*matrix[6])/100.0);
 				//log("\\Update2:Z x"+Math.round(100.0*matrix[8])/100.0+" y"+Math.round(100.0*matrix[9])/100.0+" z"+Math.round(100.0*matrix[10])/100.0);
@@ -906,7 +920,7 @@ public class JOGLImageCanvas extends ImageCanvas implements GLEventListener, Ima
 				}
 				
 				if(!frame3ddrawn[fr]) {
-					if(JCP.debug)log("Need draw "+fr);
+					if(JCP.debug)log("Need draw fr:"+(fr+1));
 					if(stereoi==0) {
 						for(int i=0;i<chs;i++) {
 							int ccfr=fr*chs+i;
@@ -1087,9 +1101,8 @@ public class JOGLImageCanvas extends ImageCanvas implements GLEventListener, Ima
 			if(isPoint) {
 				for(int i=0;i<roi.getPolygon().npoints;i++) {
 					int ppos=((PointRoi)roi).getPointPosition(i);
-					roi.getCPosition(); roi.getZPosition(); roi.getTPosition();
-					int pfrm=ppos/(sls*chs), pfrmRem=ppos%(sls*chs), psl=pfrmRem/chs, pch=pfrmRem%chs;
-					if(ppos==0 || (pfrm==(imp.getT()-1) && pch==(imp.getC()-1))) {
+					int pfrm=ppos/(sls*chs)+1, pfrmRem=ppos%(sls*chs), psl=pfrmRem/chs+1, pch=pfrmRem%chs;
+					if(ppos==0 || (pfrm==imp.getT() && pch==imp.getC())) {
 						doOv[psl]=true;
 					}
 				}
@@ -1132,14 +1145,13 @@ public class JOGLImageCanvas extends ImageCanvas implements GLEventListener, Ima
 	}
 	
 	public void setGamma(float[] gamma) {
-		this.gamma=gamma;
-		imageState.setNextSrcRect=true;
+		imageState.setGamma(gamma);
 		repaint();
 	}
-	public float[] getGamma() {return gamma;}
+	public float[] getGamma() {return imageState.getGamma();}
 
 	public Quaternion getRotation() {
-		return qrot;
+		return new Quaternion(imageState.rotation());
 	}
 
 	public void updateCutPlanesCube(int[] c, boolean withRepaint) {
@@ -1234,83 +1246,6 @@ public class JOGLImageCanvas extends ImageCanvas implements GLEventListener, Ima
 			};
 			return screenCoords;
 		}
-	}
-	
-	static class ImageState{
-		private final ImagePlus imp;
-		private final JOGLImageCanvas jic;
-		public Rectangle prevSrcRect;
-		public double prevMag;
-		public MinMax[] minmaxs;
-		public Calibration prevCal;
-		public int c,z,t;
-		public Quaternion prevRot;
-		public IsChanged isChanged=new IsChanged();
-		public boolean setNextSrcRect=false;
-		
-		public ImageState(ImagePlus imp, JOGLImageCanvas jic) {
-			this.imp=imp;
-			this.jic=jic;
-			update();
-		}
-		
-		public void update() {
-			prevSrcRect=(Rectangle)jic.getSrcRect().clone();
-			prevMag=jic.getMagnification();
-			minmaxs=MinMax.getMinMaxs(imp.getLuts());
-			prevCal=(Calibration)imp.getCalibration().clone();
-			c=imp.getC(); z=imp.getZ(); t=imp.getT();
-			prevRot=new Quaternion(jic.getRotation());
-		}
-		
-		public void check(Quaternion qrot) {
-			reset();
-			isChanged.srcRect= (!prevSrcRect.equals(jic.getSrcRect())) || setNextSrcRect || prevMag!=jic.getMagnification();
-			MinMax[] newMinmaxs=MinMax.getMinMaxs(imp.getLuts());
-			isChanged.minmax=false;
-			for(int i=0;i<minmaxs.length;i++) {
-				if(newMinmaxs[i].min!=minmaxs[i].min || newMinmaxs[i].max!=minmaxs[i].max)isChanged.minmax=true;
-			}
-			isChanged.cal=!prevCal.equals(imp.getCalibration());
-			isChanged.c=(c!=imp.getC());
-			isChanged.z=(z!=imp.getZ());
-			isChanged.t=(t!=imp.getT());
-			isChanged.czt=(isChanged.c || isChanged.z || isChanged.t);
-			isChanged.slice=!((c==imp.getC()||imp.getCompositeMode()==IJ.COMPOSITE) && z==imp.getSlice() && t==imp.getFrame());
-			isChanged.rotation=!prevRot.equals(qrot);
-			update();
-			setNextSrcRect=false;
-		}
-		
-		public void reset() {
-			isChanged.reset();
-		}
-		
-		static class IsChanged{
-			public boolean c,z,t,czt,cal,minmax,srcRect, slice, rotation;
-			public void reset() {
-				slice=srcRect=minmax=cal=czt=c=z=t=rotation=false;
-			}
-		}
-		
-		public String toString() {
-			return ("isChanged: c:"+isChanged.c+" z:"+isChanged.z+" t:"+isChanged.t+" cal:"+isChanged.cal+" minmax:"+isChanged.minmax+" srcRect:"+isChanged.srcRect+" slice:"+isChanged.slice+" rotation:"+isChanged.rotation);
-		}
-		
-		public static class MinMax{
-			public double min=0,max=0;
-			public MinMax(double min, double max) {this.min=min;this.max=max;}
-			public static MinMax[] getMinMaxs(LUT[] luts) {
-				MinMax[] minmaxs=new MinMax[luts.length];
-				double min=0,max=0;
-				for(int i=0;i<luts.length;i++) {
-					if(luts!=null && i<luts.length) {min=luts[i].min;max=luts[i].max;}
-					minmaxs[i]=new MinMax(min,max);
-				}
-				return minmaxs;
-			}
-		}
-		
 	}
 	
 	public BufferedImage grabScreen(GLAutoDrawable drawable) {
@@ -1484,7 +1419,7 @@ public class JOGLImageCanvas extends ImageCanvas implements GLEventListener, Ima
 	
 	public void setRenderFunction(String function) {
 		if(function.equals("MAX") || function.equals("ALPHA"))renderFunction=function;
-		imageState.setNextSrcRect=true;
+		imageState.setNeedRedraw();
 		repaint();
 	}
 
@@ -1601,6 +1536,7 @@ public class JOGLImageCanvas extends ImageCanvas implements GLEventListener, Ima
 	public void paint(Graphics g) {
 		/**Only perform java painting if the canvas is a mirror
 		 * (Otherwise painting is done solely in JOGL)
+		 * Also paint the mirror cursor if it is on screen and the mirror is active
 		 */
 		if(isMirror) {
 			super.paint(g);
@@ -1859,7 +1795,7 @@ public class JOGLImageCanvas extends ImageCanvas implements GLEventListener, Ima
 			repaint();
 		}
 		else if(cmd.equals("revert")){revert();}
-		else if(cmd.equals("reset3d")){resetAngles();}
+		else if(cmd.equals("reset3d")){resetAngles(); resetTranslation(); setSupermag(0f);}
 		else if(cmd.equals("adjust3d")){
 			if(jccpDialog==null || !jccpDialog.isVisible()) {jccpDialog=new JCCutPlanes(this); positionDialog(jccpDialog);}
 			else jccpDialog.requestFocus();
@@ -1962,7 +1898,7 @@ public class JOGLImageCanvas extends ImageCanvas implements GLEventListener, Ima
 
 	public void imageUpdated(ImagePlus uimp) {
 		if(imp.equals(uimp)) {
-			myImageUpdated=true;
+			imageListenerUpdated=true;
 			if(!go3d) {
 				repaintLater();
 			}
@@ -2183,8 +2119,8 @@ public class JOGLImageCanvas extends ImageCanvas implements GLEventListener, Ima
 		}
 	}
 	
-	public void setSuperMag(float m) { if(supermag!=m)imageState.setNextSrcRect=true; supermag=m;}
-	public float getSuperMag() {return supermag;}
+	public void setSupermag(float m) { if(imageState.setSupermag(m)) repaintLater();}
+	public float getSupermag() {return imageState.getSupermag();}
 	
 	@Override
 	public void mouseDragged(MouseEvent e) {
@@ -2205,21 +2141,22 @@ public class JOGLImageCanvas extends ImageCanvas implements GLEventListener, Ima
 					glw.warpPointer(wx,wy);
 				}else{sx=e.getX(); sy=e.getY();}
 				float rotx=0f, roty=0f, rotz=0f;
+				float[] translation=imageState.getTranslation();
 				if(alt||e.getButton()==MouseEvent.BUTTON2) {
 					if(shift) {
-						tz-=yd/(float)srcRect.height;
-						imageState.setNextSrcRect=true;
+						translation[2]-=yd/(float)srcRect.height;
+						imageState.setTranslation(translation);
 					}else{
 						//qrot.rotateByEuler(0f, 0f, (float)Math.toRadians(yd*90f));
 						rotz=-yd/1500f*rotmult;
 					}
 				}else if(shift) {
 					if(ctrl) {
-						setSuperMag(supermag-yd/1000f*(float)magnification);
+						imageState.adjustSupermag(-yd/1000f*(float)magnification);
 					}else {
-						tx+=xd/(float)srcRect.width;
-						ty-=yd/(float)srcRect.height;
-						imageState.setNextSrcRect=true;
+						translation[0]+=xd/(float)srcRect.width;
+						translation[1]-=yd/(float)srcRect.height;
+						imageState.setTranslation(translation);
 					}
 				}else {
 					//qrot.rotateByEuler((float)Math.toRadians(yd*90f), (float)Math.toRadians(xd*90f), 0f);
@@ -2228,7 +2165,7 @@ public class JOGLImageCanvas extends ImageCanvas implements GLEventListener, Ima
 				}
 				if(rotx!=0f || roty!=0f || rotz!=0f) {
 					Quaternion qrot2=new Quaternion().setFromEuler(rotx, roty, rotz);
-					qrot=qrot2.mult(qrot);
+					imageState.setRotation(qrot2.mult(imageState.rotation()));
 				}
 			}
 		}else {
@@ -2258,12 +2195,6 @@ public class JOGLImageCanvas extends ImageCanvas implements GLEventListener, Ima
 			super.mouseReleased(e);
 		}
 		mouseDragged=false;
-	}
-	
-	public void resetAngles() {
-		tx=0f; ty=0f; tz=0f; supermag=0f;
-		qrot.setIdentity();
-		repaint();
 	}
 	
 	@Override
@@ -2311,15 +2242,30 @@ public class JOGLImageCanvas extends ImageCanvas implements GLEventListener, Ima
 	 * @return float[]{dx, dy, dz, tx, ty, tz}
 	 */
 	public float[] getEulerAngles() {
-		Vec3f euler=qrot.toEuler(new Vec3f());
-		return new float[] {(float)Math.toDegrees(euler.x()), (float)Math.toDegrees(euler.y()), (float)Math.toDegrees(euler.z()), tx, ty, tz};
+		Vec3f euler=imageState.rotation().toEuler(new Vec3f());
+		return new float[] {(float)Math.toDegrees(euler.x()), (float)Math.toDegrees(euler.y()), (float)Math.toDegrees(euler.z())};
 	}
 	
 	public void setEulerAngles(float[] eas) {
-		if(eas==null || eas.length!=6) {resetAngles(); return;}
-		qrot.setFromEuler((float)Math.toRadians(eas[0]), (float)Math.toRadians(eas[1]), (float)Math.toRadians(eas[2]));
-		tx=eas[3]; ty=eas[4]; tz=eas[5];
-		imageState.setNextSrcRect=true;
+		if(eas==null || eas.length!=3) {resetAngles(); return;}
+		if(imageState.setRotationEuler(eas))repaintLater();
+	}
+	
+	public void resetAngles() {
+		if(imageState.setRotation(null))repaintLater();
+	}
+
+	public void setTranslation(float[] translation) {
+		if(translation==null || translation.length!=3) {resetTranslation(); return;}
+		if(imageState.setTranslation(translation))repaintLater();
+	}
+
+	public float[] getTranslation() {
+		return imageState.getTranslation();
+	}
+
+	public void resetTranslation() {
+		if(imageState.setTranslation(null))repaintLater();
 	}
 	
 	/**
@@ -2327,10 +2273,11 @@ public class JOGLImageCanvas extends ImageCanvas implements GLEventListener, Ima
 	 * @param nearfar
 	 */
 	public void setNearFar(float[] nearfar) {
-		zNear=nearfar[0];
-		zFar=nearfar[1];
-		resetGlobalMatrices(null);
-		imageState.setNextSrcRect=true;
+		if(imageState.setZNearFar(nearfar))repaintLater();
+	}
+
+	public float[] getNearFar() {
+		return imageState.getZNearFar();
 	}
 	
 	public void setDPImag(double dpi) {

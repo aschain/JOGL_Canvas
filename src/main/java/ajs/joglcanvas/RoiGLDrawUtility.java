@@ -137,7 +137,7 @@ public class RoiGLDrawUtility {
 		if(roi==null)return;
 		int sls=imp.getNSlices(), ch=imp.getC(), sl=imp.getZ(), fr=imp.getT();
 		int rch=roi.getCPosition(), rsl=roi.getZPosition(), rfr=roi.getTPosition();
-		if(!(rfr==0 || rfr==fr))return;
+		if(!(rfr==0 || rfr==fr) && !(roi.getType()==Roi.POINT))return;
 		if(!go3d && !((rch==0 || ch==rch) && (rsl==0 || rsl==sl)))return;
 		if(roi instanceof ShapeRoi) {
 			Roi[] rois=((ShapeRoi)roi).getRois();
@@ -157,9 +157,9 @@ public class RoiGLDrawUtility {
 			JOGLImageCanvas jic=JCP.getJOGLImageCanvas(imp);
 			if(jic!=null) {
 				CutPlanesCube fc=jic.getCutPlanesCube();
-				if(rsl!=0 && fc.applyToRoi && (rsl<=fc.z() ||rsl>fc.d()))return;
 				Rectangle b=roi.getBounds();
-				if(tp!=Roi.POINT && fc.applyToRoi) {
+				if(fc.applyToRoi && tp!=Roi.POINT) {
+					if(rsl!=0 && (rsl<=fc.z() ||rsl>fc.d()))return;
 					if((b.x+b.width)<fc.x() || (b.x>fc.w()))return;
 					if((b.y+b.height)<fc.y() || (b.y>fc.h()))return;
 				}
@@ -188,7 +188,6 @@ public class RoiGLDrawUtility {
 				fp.ypoints[i]+=0.5f;
 			}
 		}
-		
 		if(tp==Roi.POINT) {
 			PointRoi proi=(PointRoi)roi;
 			int n=fp.npoints;
@@ -201,7 +200,7 @@ public class RoiGLDrawUtility {
 					if(imp.getCurrentSlice()==pos || pos==0 || Prefs.showAllPoints)
 						drawPoint(proi, fp.xpoints[i], fp.ypoints[i], 0f,i);
 				}else {
-					if(rf==imp.getT() && (rc==imp.getC()||Prefs.showAllPoints)) {
+					if(rf==imp.getT() && (rc==imp.getC() || Prefs.showAllPoints)) {
 						CutPlanesCube fc=JCP.getJOGLImageCanvas(imp).getCutPlanesCube();
 						if( !fc.applyToRoi || ( rz>fc.z() && rz<=fc.d() 
 								&& fp.xpoints[i]>fc.x() && fp.xpoints[i]<=fc.w()

@@ -126,8 +126,9 @@ public class JCMirror extends Frame{
 				g.fillRect(0,0, getWidth(), getHeight());
 				float[] eas=jic.getEulerAngles();
 				String line="RotX:"+Math.round(eas[0])+"° RotY:"+Math.round(eas[1])+"° RotZ:"+Math.round(eas[2])+"°";
-				if(jic.supermag!=0f || jic.getMagnification()!=1.0)line+=" Mag:"+String.format("%.2f", (float)jic.getMagnification()+jic.supermag)+"x";
-				if(jic.tx!=0f || jic.ty!=0f || jic.tz!=0f)line+=" Tx:"+String.format("%.1f", jic.tx)+" Ty:"+String.format("%.1f", jic.ty)+" Tz:"+String.format("%.1f", jic.tz);
+				if(jic.getSupermag()!=0f || jic.getMagnification()!=1.0)line+=" Mag:"+String.format("%.2f", (float)jic.getMagnification()+jic.getSupermag())+"x";
+				float[] trs=jic.getTranslation();
+				if(trs[0]!=0f || trs[1]!=0f || trs[2]!=0f)line+=" Tx:"+String.format("%.1f", trs[0])+" Ty:"+String.format("%.1f", trs[1])+" Tz:"+String.format("%.1f", trs[2]);
 				g.setFont(new java.awt.Font("SansSerif", java.awt.Font.PLAIN, 12));
 				int x=getInsets().left+ImageWindow.HGAP+5, y=getInsets().top+11;
 				g.setColor(new Color(0,0,255,255));

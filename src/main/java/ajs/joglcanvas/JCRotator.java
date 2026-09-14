@@ -25,8 +25,10 @@ public class JCRotator extends JCAdjuster implements MouseMotionListener {
 
 	public JCRotator(JOGLImageCanvas jica) {
 		super("Rotation and Translation", jica);
-		float[] inits=jic.getEulerAngles();
-		if(inits==null)inits=new float[] {0f,0f,0f,0f,0f,0f};
+		float[] initangles=jic.getEulerAngles();
+		float[] inittranslations=jic.getTranslation();
+		if(initangles==null)initangles=new float[] {0f,0f,0f};
+		if(inittranslations==null)inittranslations=new float[] {0f,0f,0f};
 		setLayout(new GridBagLayout());
 		GridBagConstraints c= new GridBagConstraints();
 		c.gridx=0;
@@ -42,7 +44,7 @@ public class JCRotator extends JCAdjuster implements MouseMotionListener {
 		};
 		for(int i=0;i<rnsps.length;i++) {
 			c.gridy++;
-			rnsps[i]=new NumberScrollPanel(inits[i],0,360,cps[i],0);
+			rnsps[i]=new NumberScrollPanel(initangles[i],0,360,cps[i],0);
 			final int ii=i;
 			rnsps[i].getIcon().addMouseListener(new MouseAdapter() {
 				public void mousePressed(MouseEvent e){
@@ -87,7 +89,7 @@ public class JCRotator extends JCAdjuster implements MouseMotionListener {
 		add(new Label("Translation"),c);
 		for(int i=0;i<tnsps.length;i++) {
 			c.gridy++;
-			tnsps[i]=new NumberScrollPanel(inits[i+3],-2.0f,2.0f,cps[i],2);
+			tnsps[i]=new NumberScrollPanel(inittranslations[i],-2.0f,2.0f,cps[i],2);
 			final int ii=i;
 			tnsps[i].getIcon().addMouseListener(new MouseAdapter() {
 				public void mousePressed(MouseEvent e){
@@ -113,18 +115,18 @@ public class JCRotator extends JCAdjuster implements MouseMotionListener {
 		c.gridy++;
 		al=new AdjustmentListener() {
 			public void adjustmentValueChanged(AdjustmentEvent e) {
-				jic.setSuperMag(zscp.getFloatValue());
+				jic.setSupermag(zscp.getFloatValue());
 				jic.repaint();
 			}
 		};
 		add(new Label("Additional Magnification"),c);
 		for(int i=0;i<1;i++) {
 			c.gridy++;
-			zscp=new NumberScrollPanel(jic.getSuperMag(),-2.0f,2.0f,'M',2);
+			zscp=new NumberScrollPanel(jic.getSupermag(),-2.0f,2.0f,'M',2);
 			zscp.getIcon().addMouseListener(new MouseAdapter() {
 				public void mousePressed(MouseEvent e){
 					zscp.setFloatValue(0);
-					jic.setSuperMag(zscp.getFloatValue());
+					jic.setSupermag(zscp.getFloatValue());
 					jic.repaint();
 				}
 			});
@@ -139,7 +141,7 @@ public class JCRotator extends JCAdjuster implements MouseMotionListener {
 			public void actionPerformed(ActionEvent e) {
 				if(jic.icc==null || !jic.icc.isVisible())dispose();
 				zscp.setFloatValue(0);
-				jic.setSuperMag(zscp.getFloatValue());
+				jic.setSupermag(zscp.getFloatValue());
 				jic.repaint();
 			}
 		});
@@ -155,7 +157,8 @@ public class JCRotator extends JCAdjuster implements MouseMotionListener {
 		};
 		for(int i=0;i<znsps.length;i++) {
 			c.gridy++;
-			znsps[i]=new NumberScrollPanel(i==0?jic.zNear:jic.zFar,JCP.zNear,JCP.zFar,i==0?'N':'F',2);
+			float[] nearfar=jic.getNearFar();
+			znsps[i]=new NumberScrollPanel(i==0?nearfar[0]:nearfar[1],JCP.zNear,JCP.zFar,i==0?'N':'F',2);
 			final int ii=i;
 			znsps[i].getIcon().addMouseListener(new MouseAdapter() {
 				public void mousePressed(MouseEvent e){
@@ -194,12 +197,14 @@ public class JCRotator extends JCAdjuster implements MouseMotionListener {
 	}
 	
 	public void update() {
-		float[] eas=new float[6];
+		float[] eas=new float[3];
+		float[] trs=new float[3];
 		for(int i=0;i<rnsps.length;i++) {
 			eas[i]=rnsps[i].getFloatValue();
-			eas[i+3]=tnsps[i].getFloatValue();
+			trs[i]=tnsps[i].getFloatValue();
 		}
 		jic.setEulerAngles(eas);
+		jic.setTranslation(trs);
 		jic.repaint();
 	}
 
@@ -212,10 +217,11 @@ public class JCRotator extends JCAdjuster implements MouseMotionListener {
 			public void run() {
 				isRunning=true;
 				float[] inits=jic.getEulerAngles();
+				float[] inittrans=jic.getTranslation();
 				for(int i=0;i<rnsps.length;i++) {
 					rnsps[i].setFloatValue(inits[i]);
-					tnsps[i].setFloatValue(inits[i+3]);
-					zscp.setFloatValue(jic.getSuperMag());
+					tnsps[i].setFloatValue(inittrans[i]);
+					zscp.setFloatValue(jic.getSupermag());
 				}
 				try {
 					Thread.sleep(200);
